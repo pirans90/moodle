@@ -2159,26 +2159,23 @@ function readfile_accel($file, $mimetype, $accelerate) {
         }
     }
 
-    if ($accelerate and empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
-        header('Accept-Ranges: bytes');
-    } else {
-        header('Accept-Ranges: none');
-    }
+    if ($accelerate and !empty($CFG->xsendfile)) {
+        if (empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
+            header('Accept-Ranges: bytes');
+        } else {
+            header('Accept-Ranges: none');
+        }
 
-    if ($accelerate) {
         if (is_object($file)) {
             $fs = get_file_storage();
-            if ($fs->supports_xsendfile()) {
-                if ($fs->xsendfile($file->get_contenthash())) {
-                    return;
-                }
+            if ($fs->xsendfile($file->get_contenthash())) {
+                return;
             }
+
         } else {
-            if (!empty($CFG->xsendfile)) {
-                require_once("$CFG->libdir/xsendfilelib.php");
-                if (xsendfile($file)) {
-                    return;
-                }
+            require_once("$CFG->libdir/xsendfilelib.php");
+            if (xsendfile($file)) {
+                return;
             }
         }
     }
@@ -2188,6 +2185,7 @@ function readfile_accel($file, $mimetype, $accelerate) {
     header('Last-Modified: '. gmdate('D, d M Y H:i:s', $lastmodified) .' GMT');
 
     if ($accelerate and empty($CFG->disablebyteserving) and $mimetype !== 'text/plain') {
+        header('Accept-Ranges: bytes');
 
         if (!empty($_SERVER['HTTP_RANGE']) and strpos($_SERVER['HTTP_RANGE'],'bytes=') !== FALSE) {
             // byteserving stuff - for acrobat reader and download accelerators
@@ -2225,6 +2223,9 @@ function readfile_accel($file, $mimetype, $accelerate) {
                 byteserving_send_file($handle, $mimetype, $ranges, $filesize);
             }
         }
+    } else {
+        // Do not byteserve
+        header('Accept-Ranges: none');
     }
 
     header('Content-Length: '.$filesize);
@@ -3102,7 +3103,7 @@ class curl {
      */
     public function resetopt() {
         $this->options = array();
-        $this->options['CURLOPT_USERAGENT']         = \core_useragent::get_moodlebot_useragent();
+        $this->options['CURLOPT_USERAGENT']         = 'MoodleBot/1.0';
         // True to include the header in the output
         $this->options['CURLOPT_HEADER']            = 0;
         // True to Exclude the body from the output
@@ -3345,7 +3346,7 @@ class curl {
         } else if (!empty($this->options['CURLOPT_USERAGENT'])) {
             $useragent = $this->options['CURLOPT_USERAGENT'];
         } else {
-            $useragent = \core_useragent::get_moodlebot_useragent();
+            $useragent = 'MoodleBot/1.0';
         }
 
         // Set headers.

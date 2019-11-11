@@ -9,8 +9,7 @@
                    {{#error}}is-invalid{{/error}}"
         name="{{element.name}}"
         id="{{element.id}}"
-        {{#element.multiple}}multiple{{/element.multiple}}
-        {{#element.size}}size="{{element.size}}"{{/element.size}}
+        {{#element.multiple}}multiple size="{{element.size}}"{{/element.multiple}}
         {{#error}}
             autofocus aria-describedby="{{element.iderror}}"
         {{/error}}

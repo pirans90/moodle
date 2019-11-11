@@ -1259,14 +1259,7 @@ function question_category_select_menu($contexts, $top = false, $currentcat = 0,
         $options[] = array($group => $opts);
     }
     echo html_writer::label(get_string('questioncategory', 'core_question'), 'id_movetocategory', false, array('class' => 'accesshide'));
-    $attrs = array(
-        'id' => 'id_movetocategory',
-        'class' => 'custom-select',
-        'data-action' => 'toggle',
-        'data-togglegroup' => 'qbank',
-        'data-toggle' => 'action',
-        'disabled' => true,
-    );
+    $attrs = array('id' => 'id_movetocategory', 'class' => 'custom-select');
     echo html_writer::select($options, 'category', $selected, $choose, $attrs);
 }
 
@@ -1440,25 +1433,11 @@ function question_category_options($contexts, $top = false, $currentcat = 0,
             if ($category->contextid == $contextid) {
                 $cid = $category->id;
                 if ($currentcat != $cid || $currentcat == 0) {
-                    $a = new stdClass;
-                    $a->name = format_string($category->indentedname, true,
-                            array('context' => $context));
-                    if ($category->idnumber !== null && $category->idnumber !== '') {
-                        $a->idnumber = s($category->idnumber);
-                    }
-                    if (!empty($category->questioncount)) {
-                        $a->questioncount = $category->questioncount;
-                    }
-                    if (isset($a->idnumber) && isset($a->questioncount)) {
-                        $formattedname = get_string('categorynamewithidnumberandcount', 'question', $a);
-                    } else if (isset($a->idnumber)) {
-                        $formattedname = get_string('categorynamewithidnumber', 'question', $a);
-                    } else if (isset($a->questioncount)) {
-                        $formattedname = get_string('categorynamewithcount', 'question', $a);
-                    } else {
-                        $formattedname = $a->name;
-                    }
-                    $categoriesarray[$contextstring][$cid] = $formattedname;
+                    $countstring = !empty($category->questioncount) ?
+                            " ($category->questioncount)" : '';
+                    $categoriesarray[$contextstring][$cid] =
+                            format_string($category->indentedname, true,
+                                array('context' => $context)) . $countstring;
                 }
             }
         }
@@ -1889,14 +1868,14 @@ class question_edit_contexts {
     }
 
     /**
-     * @return context[] all parent contexts
+     * @return array all parent contexts
      */
     public function all() {
         return $this->allcontexts;
     }
 
     /**
-     * @return context lowest context which must be either the module or course context
+     * @return object lowest context which must be either the module or course context
      */
     public function lowest() {
         return $this->allcontexts[0];
@@ -1904,7 +1883,7 @@ class question_edit_contexts {
 
     /**
      * @param string $cap capability
-     * @return context[] parent contexts having capability, zero based index
+     * @return array parent contexts having capability, zero based index
      */
     public function having_cap($cap) {
         $contextswithcap = array();
@@ -1918,7 +1897,7 @@ class question_edit_contexts {
 
     /**
      * @param array $caps capabilities
-     * @return context[] parent contexts having at least one of $caps, zero based index
+     * @return array parent contexts having at least one of $caps, zero based index
      */
     public function having_one_cap($caps) {
         $contextswithacap = array();
@@ -1935,14 +1914,14 @@ class question_edit_contexts {
 
     /**
      * @param string $tabname edit tab name
-     * @return context[] parent contexts having at least one of $caps, zero based index
+     * @return array parent contexts having at least one of $caps, zero based index
      */
     public function having_one_edit_tab_cap($tabname) {
         return $this->having_one_cap(self::$caps[$tabname]);
     }
 
     /**
-     * @return context[] those contexts where a user can add a question and then use it.
+     * @return those contexts where a user can add a question and then use it.
      */
     public function having_add_and_use() {
         $contextswithcap = array();
@@ -2007,7 +1986,7 @@ class question_edit_contexts {
     /**
      * Throw error if at least one parent context hasn't got one of the caps $caps
      *
-     * @param array $caps capabilities
+     * @param array $cap capabilities
      */
     public function require_one_cap($caps) {
         if (!$this->have_one_cap($caps)) {

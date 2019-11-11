@@ -868,23 +868,16 @@ class single_button implements renderable {
     public $actionid;
 
     /**
-     * @var array
-     */
-    protected $attributes = [];
-
-    /**
      * Constructor
      * @param moodle_url $url
      * @param string $label button text
      * @param string $method get or post submit method
-     * @param array $attributes Attributes for the HTML button tag
      */
-    public function __construct(moodle_url $url, $label, $method='post', $primary=false, $attributes = []) {
+    public function __construct(moodle_url $url, $label, $method='post', $primary=false) {
         $this->url    = clone($url);
         $this->label  = $label;
         $this->method = $method;
         $this->primary = $primary;
-        $this->attributes = $attributes;
     }
 
     /**
@@ -906,17 +899,6 @@ class single_button implements renderable {
     }
 
     /**
-     * Sets an attribute for the HTML button tag.
-     *
-     * @param  string $name  The attribute name
-     * @param  mixed  $value The value
-     * @return null
-     */
-    public function set_attribute($name, $value) {
-        $this->attributes[$name] = $value;
-    }
-
-    /**
      * Export data.
      *
      * @param renderer_base $output Renderer.
@@ -935,11 +917,6 @@ class single_button implements renderable {
         $data->disabled = $this->disabled;
         $data->tooltip = $this->tooltip;
         $data->primary = $this->primary;
-
-        $data->attributes = [];
-        foreach ($this->attributes as $key => $value) {
-            $data->attributes[] = ['name' => $key, 'value' => $value];
-        }
 
         // Form parameters.
         $params = $this->url->params();
@@ -1808,12 +1785,10 @@ class html_writer {
      * @param bool $checked Whether the checkbox is checked
      * @param string $label The label for the checkbox
      * @param array $attributes Any attributes to apply to the checkbox
-     * @param array $labelattributes Any attributes to apply to the label, if present
      * @return string html fragment
      */
-    public static function checkbox($name, $value, $checked = true, $label = '',
-            array $attributes = null, array $labelattributes = null) {
-        $attributes = (array) $attributes;
+    public static function checkbox($name, $value, $checked = true, $label = '', array $attributes = null) {
+        $attributes = (array)$attributes;
         $output = '';
 
         if ($label !== '' and !is_null($label)) {
@@ -1829,9 +1804,7 @@ class html_writer {
         $output .= self::empty_tag('input', $attributes);
 
         if ($label !== '' and !is_null($label)) {
-            $labelattributes = (array) $labelattributes;
-            $labelattributes['for'] = $attributes['id'];
-            $output .= self::tag('label', $label, $labelattributes);
+            $output .= self::tag('label', $label, array('for'=>$attributes['id']));
         }
 
         return $output;

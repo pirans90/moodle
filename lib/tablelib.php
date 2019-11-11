@@ -863,9 +863,9 @@ class flexible_table {
      * @return string contents of cell in column 'fullname', for this row.
      */
     function col_fullname($row) {
-        global $PAGE, $COURSE;
+        global $COURSE;
 
-        $name = fullname($row, has_capability('moodle/site:viewfullnames', $PAGE->context));
+        $name = fullname($row);
         if ($this->download) {
             return $name;
         }
@@ -1615,7 +1615,7 @@ class table_sql extends flexible_table {
             }
             $grandtotal = $DB->count_records_sql($this->countsql, $this->countparams);
             if ($useinitialsbar && !$this->is_downloading()) {
-                $this->initialbars(true);
+                $this->initialbars($grandtotal > $pagesize);
             }
 
             list($wsql, $wparams) = $this->get_sql_where();

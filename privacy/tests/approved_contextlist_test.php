@@ -42,6 +42,7 @@ class approved_contextlist_test extends advanced_testcase {
      * The approved contextlist should not be modifiable once set.
      *
      * @covers ::__construct
+     * @covers ::<!public>
      * @covers \core_privacy\local\request\approved_contextlist<extended>
      */
     public function test_default_values_set() {

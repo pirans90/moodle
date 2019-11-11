@@ -279,10 +279,8 @@ class mod_assign_renderer extends plugin_renderer_base {
 
         // Status.
         if ($summary->teamsubmission) {
-            if ($summary->warnofungroupedusers === assign_grading_summary::WARN_GROUPS_REQUIRED) {
+            if ($summary->warnofungroupedusers) {
                 $o .= $this->output->notification(get_string('ungroupedusers', 'assign'));
-            } else if ($summary->warnofungroupedusers === assign_grading_summary::WARN_GROUPS_OPTIONAL) {
-                $o .= $this->output->notification(get_string('ungroupedusersoptional', 'assign'));
             }
 
             $this->add_table_row_tuple($t, get_string('numberofteams', 'assign'),
@@ -312,30 +310,15 @@ class mod_assign_renderer extends plugin_renderer_base {
         if ($summary->duedate) {
             // Due date.
             $duedate = $summary->duedate;
-            if ($summary->courserelativedatesmode) {
-                // Returns a formatted string, in the format '10d 10h 45m'.
-                $diffstr = get_time_interval_string($duedate, $summary->coursestartdate);
-                if ($duedate >= $summary->coursestartdate) {
-                    $userduedate = get_string('relativedatessubmissionduedateafter', 'mod_assign', ['datediffstr' => $diffstr]);
-                } else {
-                    $userduedate = get_string('relativedatessubmissionduedatebefore', 'mod_assign', ['datediffstr' => $diffstr]);
-                }
-            } else {
-                $userduedate = userdate($duedate);
-            }
             $this->add_table_row_tuple($t, get_string('duedate', 'assign'),
-                                       $userduedate);
+                                       userdate($duedate));
 
             // Time remaining.
-            if ($summary->courserelativedatesmode) {
-                $due = get_string('relativedatessubmissiontimeleft', 'mod_assign');
+            $due = '';
+            if ($duedate - $time <= 0) {
+                $due = get_string('assignmentisdue', 'assign');
             } else {
-                $due = '';
-                if ($duedate - $time <= 0) {
-                    $due = get_string('assignmentisdue', 'assign');
-                } else {
-                    $due = format_time($duedate - $time);
-                }
+                $due = format_time($duedate - $time);
             }
             $this->add_table_row_tuple($t, get_string('timeremaining', 'assign'), $due);
 

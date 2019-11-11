@@ -1925,12 +1925,8 @@ class quiz_attempt {
     }
 
     /**
-     * Replace a question in an attempt with a new attempt at the same question.
-     *
-     * Well, for randomised questions, it won't be the same question, it will be
-     * a different randomised selection.
-     *
-     * @param int $slot the question to restart.
+     * Replace a question in an attempt with a new attempt at the same qestion.
+     * @param int $slot the questoin to restart.
      * @param int $timestamp the timestamp to record for this action.
      */
     public function process_redo_question($slot, $timestamp) {
@@ -1942,7 +1938,7 @@ class quiz_attempt {
         }
 
         $qubaids = new \mod_quiz\question\qubaids_for_users_attempts(
-                $this->get_quizid(), $this->get_userid(), 'all', true);
+                $this->get_quizid(), $this->get_userid());
 
         $transaction = $DB->start_delegated_transaction();
 

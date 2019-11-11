@@ -100,7 +100,7 @@ class login_set_password_form extends moodleform {
         }
 
         $errmsg = ''; // Prevents eclipse warnings.
-        if (!check_password_policy($data['password'], $errmsg, $user)) {
+        if (!check_password_policy($data['password'], $errmsg)) {
             $errors['password'] = $errmsg;
             $errors['password2'] = $errmsg;
             return $errors;

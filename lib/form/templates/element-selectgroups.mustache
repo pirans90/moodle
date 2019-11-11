@@ -4,7 +4,6 @@
         <select class="form-control custom-select {{#error}}is-invalid{{/error}}" name="{{element.name}}"
             id="{{element.id}}"
             {{#element.multiple}}multiple{{/element.multiple}}
-            {{#element.size}}size="{{element.size}}"{{/element.size}}
             {{#error}}
                 autofocus aria-describedby="{{element.iderror}}"
             {{/error}}

@@ -121,8 +121,7 @@ $messageproviders = array (
     // Message contact requests.
     'messagecontactrequests' => [
         'defaults' => [
-            // We don't need to notify in the popup output here because the message drawer
-            // already notifies users of contact requests.
+            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_LOGGEDIN + MESSAGE_DEFAULT_LOGGEDOFF,
             'email' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_LOGGEDOFF,
             'airnotifier' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_LOGGEDIN + MESSAGE_DEFAULT_LOGGEDOFF,
         ]

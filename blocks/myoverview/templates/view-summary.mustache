@@ -30,8 +30,7 @@
                 "summary": "This course is about assignments",
                 "hasprogress": true,
                 "progress": 10,
-                "coursecategory": "Miscellaneous",
-                "visible": true
+                "coursecategory": "Miscellaneous"
             }
         ]
     }
@@ -54,18 +53,12 @@
                         {{#str}}aria:coursecategory, core_course{{/str}}
                     </span>
                     {{$coursecategory}}
-                        {{#showcoursecategory}}
-                            <span class="categoryname">
-                                {{#coursecategory}}
-                                    {{{coursecategory}}}
-                                {{/coursecategory}}
-                            </span>
-                        {{/showcoursecategory}}
+                    <span class="categoryname">
+                        {{{coursecategory}}}
+                    </span>
                     {{/coursecategory}}
                     {{#showshortname}}
-                        {{#showcoursecategory}}
-                            <div class="pl-1 pr-1">|</div>
-                        {{/showcoursecategory}}
+                    <div class="pl-1 pr-1">|</div>
                     <span class="sr-only">
                         {{#str}}aria:courseshortname, core_course{{/str}}
                     </span>
@@ -82,11 +75,6 @@
                     </a>
                     {{> block_myoverview/course-action-menu }}
                 </div>
-                {{^visible}}
-                    <div class="d-flex flex-wrap">
-                        <span class="tag tag-info">{{#str}} hiddenfromstudents {{/str}}</span>
-                    </div>
-                {{/visible}}
                 <div class="summary">
                     <span class="sr-only">{{#str}}aria:coursesummary, block_myoverview{{/str}}</span>
                     {{{summary}}}

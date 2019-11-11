@@ -487,9 +487,16 @@ define('HOMEPAGE_MY', 1);
 define('HOMEPAGE_USER', 2);
 
 /**
- * URL of the Moodle sites registration portal.
+ * Hub directory url (should be moodle.org)
  */
-defined('HUB_MOODLEORGHUBURL') || define('HUB_MOODLEORGHUBURL', 'https://stats.moodle.org');
+define('HUB_HUBDIRECTORYURL', "https://hubdirectory.moodle.org");
+
+
+/**
+ * Moodle.net url (should be moodle.net)
+ */
+define('HUB_MOODLEORGHUBURL', "https://moodle.net");
+define('HUB_OLDMOODLEORGHUBURL', "http://hub.moodle.org");
 
 /**
  * Moodle mobile app service name
@@ -1405,14 +1412,6 @@ function set_config($name, $value, $plugin=null) {
                 $config->value = $value;
                 $DB->insert_record('config', $config, false);
             }
-            // When setting config during a Behat test (in the CLI script, not in the web browser
-            // requests), remember which ones are set so that we can clear them later.
-            if (defined('BEHAT_TEST')) {
-                if (!property_exists($CFG, 'behat_cli_added_config')) {
-                    $CFG->behat_cli_added_config = [];
-                }
-                $CFG->behat_cli_added_config[$name] = true;
-            }
         }
         if ($name === 'siteidentifier') {
             cache_helper::update_site_identifier($value);
@@ -1649,7 +1648,7 @@ function purge_all_caches() {
  *        'other'  Purge all other caches?
  */
 function purge_caches($options = []) {
-    $defaults = array_fill_keys(['muc', 'theme', 'lang', 'js', 'template', 'filter', 'other'], false);
+    $defaults = array_fill_keys(['muc', 'theme', 'lang', 'js', 'filter', 'other'], false);
     if (empty(array_filter($options))) {
         $options = array_fill_keys(array_keys($defaults), true); // Set all options to true.
     } else {
@@ -1666,9 +1665,6 @@ function purge_caches($options = []) {
     }
     if ($options['js']) {
         js_reset_all_caches();
-    }
-    if ($options['template']) {
-        template_reset_all_caches();
     }
     if ($options['filter']) {
         reset_text_filters_cache();
@@ -2379,29 +2375,6 @@ function usertime($date, $timezone=99) {
 }
 
 /**
- * Get a formatted string representation of an interval between two unix timestamps.
- *
- * E.g.
- * $intervalstring = get_time_interval_string(12345600, 12345660);
- * Will produce the string:
- * '0d 0h 1m'
- *
- * @param int $time1 unix timestamp
- * @param int $time2 unix timestamp
- * @param string $format string (can be lang string) containing format chars: https://www.php.net/manual/en/dateinterval.format.php.
- * @return string the formatted string describing the time difference, e.g. '10d 11h 45m'.
- */
-function get_time_interval_string(int $time1, int $time2, string $format = ''): string {
-    $dtdate = new DateTime();
-    $dtdate->setTimeStamp($time1);
-    $dtdate2 = new DateTime();
-    $dtdate2->setTimeStamp($time2);
-    $interval = $dtdate2->diff($dtdate);
-    $format = empty($format) ? get_string('dateintervaldayshoursmins', 'langconfig') : $format;
-    return $interval->format($format);
-}
-
-/**
  * Given a time, return the GMT timestamp of the most recent midnight
  * for the current user.
  *
@@ -3055,14 +3028,6 @@ function require_login($courseorid = null, $autologinguest = true, $cm = null, $
     }
 }
 
-/**
- * A convenience function for where we must be logged in as admin
- * @return void
- */
-function require_admin() {
-    require_login(null, false);
-    require_capability('moodle/site:config', context_system::instance());
-}
 
 /**
  * This function just makes sure a user is logged out.
@@ -4316,9 +4281,6 @@ function delete_user(stdClass $user) {
     // Delete all content associated with the user context, but not the context itself.
     $usercontext->delete_content();
 
-    // Delete any search data.
-    \core_search\manager::context_deleted($usercontext);
-
     // Any plugin that needs to cleanup should register this event.
     // Trigger event.
     $event = \core\event\user_deleted::create(
@@ -4972,10 +4934,9 @@ function get_complete_user_data($field, $value, $mnethostid = null, $throwexcept
  *
  * @param string $password the password to be checked against the password policy
  * @param string $errmsg the error message to display when the password doesn't comply with the policy.
- * @param stdClass $user the user object to perform password validation against. Defaults to null if not provided
  * @return bool true if the password is valid according to the policy. false otherwise.
  */
-function check_password_policy($password, &$errmsg, $user = null) {
+function check_password_policy($password, &$errmsg) {
     global $CFG;
 
     if (!empty($CFG->passwordpolicy)) {
@@ -5005,7 +4966,7 @@ function check_password_policy($password, &$errmsg, $user = null) {
     $pluginsfunction = get_plugins_with_function('check_password_policy');
     foreach ($pluginsfunction as $plugintype => $plugins) {
         foreach ($plugins as $pluginfunction) {
-            $pluginerr = $pluginfunction($password, $user);
+            $pluginerr = $pluginfunction($password);
             if ($pluginerr) {
                 $errmsg .= '<div>'. $pluginerr .'</div>';
             }
@@ -5071,10 +5032,6 @@ function delete_course($courseorid, $showfeedback = true) {
         }
     }
 
-    // Tell the search manager we are about to delete a course. This prevents us sending updates
-    // for each individual context being deleted.
-    \core_search\manager::course_deleting_start($courseid);
-
     $handler = core_course\customfield\course_handler::create();
     $handler->delete_instance($courseid);
 
@@ -5091,9 +5048,6 @@ function delete_course($courseorid, $showfeedback = true) {
     if (class_exists('format_base', false)) {
         format_base::reset_course_cache($courseid);
     }
-
-    // Tell search that we have deleted the course so it can delete course data from the index.
-    \core_search\manager::course_deleting_finish($courseid);
 
     // Trigger a course deleted event.
     $event = \core\event\course_deleted::create(array(
@@ -6167,16 +6121,24 @@ function email_to_user($user, $from, $subject, $messagetext, $messagehtml = '', 
     if (!empty($user->mailformat) && $user->mailformat == 1) {
         // Only process html templates if the user preferences allow html email.
 
-        if (!$messagehtml) {
+        if ($messagehtml) {
+            // If html has been given then pass it through the template.
+            $context['body'] = $messagehtml;
+            $messagehtml = $renderer->render_from_template('core/email_html', $context);
+
+        } else {
             // If no html has been given, BUT there is an html wrapping template then
             // auto convert the text to html and then wrap it.
-            $messagehtml = trim(text_to_html($messagetext));
+            $autohtml = trim(text_to_html($messagetext));
+            $context['body'] = $autohtml;
+            $temphtml = $renderer->render_from_template('core/email_html', $context);
+            if ($autohtml != $temphtml) {
+                $messagehtml = $temphtml;
+            }
         }
-        $context['body'] = $messagehtml;
-        $messagehtml = $renderer->render_from_template('core/email_html', $context);
     }
 
-    $context['body'] = html_to_text(nl2br($messagetext));
+    $context['body'] = $messagetext;
     $mail->Subject = $renderer->render_from_template('core/email_subject', $context);
     $mail->FromName = $renderer->render_from_template('core/email_fromname', $context);
     $messagetext = $renderer->render_from_template('core/email_text', $context);
@@ -6462,6 +6424,8 @@ function send_confirmation_email($user, $confirmationurl = null) {
 
     $message     = get_string('emailconfirmation', '', $data);
     $messagehtml = text_to_html(get_string('emailconfirmation', '', $data), false, false, true);
+
+    $user->mailformat = 1;  // Always send HTML version as well.
 
     // Directly email rather than using the messaging system to ensure its not routed to a popup or jabber.
     return email_to_user($user, $supportuser, $subject, $message, $messagehtml);
@@ -7071,10 +7035,19 @@ function current_language() {
  */
 function get_parent_language($lang=null) {
 
-    $parentlang = get_string_manager()->get_string('parentlanguage', 'langconfig', null, $lang);
+    // Let's hack around the current language.
+    if (!empty($lang)) {
+        $oldforcelang = force_current_language($lang);
+    }
 
+    $parentlang = get_string('parentlanguage', 'langconfig');
     if ($parentlang === 'en') {
         $parentlang = '';
+    }
+
+    // Let's hack around the current language.
+    if (!empty($lang)) {
+        force_current_language($oldforcelang);
     }
 
     return $parentlang;
@@ -9082,11 +9055,11 @@ function mtrace($string, $eol="\n", $sleep=0) {
         $fn($string, $eol);
         return;
     } else if (defined('STDOUT') && !PHPUNIT_TEST && !defined('BEHAT_TEST')) {
+        fwrite(STDOUT, $string.$eol);
+
         // We must explicitly call the add_line function here.
         // Uses of fwrite to STDOUT are not picked up by ob_start.
-        if ($output = \core\task\logmanager::add_line("{$string}{$eol}")) {
-            fwrite(STDOUT, $output);
-        }
+        \core\task\logmanager::add_line("{$string}{$eol}");
     } else {
         echo $string . $eol;
     }

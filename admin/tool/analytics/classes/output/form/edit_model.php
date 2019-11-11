@@ -65,15 +65,6 @@ class edit_model extends \moodleform {
             $mform->addRule('target', get_string('required'), 'required', null, 'client');
         }
 
-        if (!empty($this->_customdata['targetname']) && !empty($this->_customdata['targetclass'])) {
-            $mform->addElement('static', 'targetname', get_string('target', 'tool_analytics'), $this->_customdata['targetname']);
-            $mform->addElement('hidden', 'target',
-                \tool_analytics\output\helper::class_to_option($this->_customdata['targetclass']));
-            // We won't update the model's target so no worries about its format (we can't use PARAM_ALPHANUMEXT
-            // because of class_to_option).
-            $mform->setType('target', PARAM_TEXT);
-        }
-
         // Indicators.
         if (!$this->_customdata['staticmodel']) {
             $indicators = array();
@@ -90,13 +81,6 @@ class edit_model extends \moodleform {
         }
 
         // Time-splitting methods.
-        if (!empty($this->_customdata['invalidcurrenttimesplitting'])) {
-            $mform->addElement('html', $OUTPUT->notification(
-                get_string('invalidcurrenttimesplitting', 'tool_analytics'),
-                \core\output\notification::NOTIFY_WARNING)
-            );
-        }
-
         $timesplittings = array('' => '');
         foreach ($this->_customdata['timesplittings'] as $classname => $timesplitting) {
             $optionname = \tool_analytics\output\helper::class_to_option($classname);
@@ -147,16 +131,9 @@ class edit_model extends \moodleform {
         $errors = parent::validation($data, $files);
 
         if (!empty($data['timesplitting'])) {
-            $timesplittingclass = \tool_analytics\output\helper::option_to_class($data['timesplitting']);
-            if (\core_analytics\manager::is_valid($timesplittingclass, '\core_analytics\local\time_splitting\base') === false) {
+            $realtimesplitting = \tool_analytics\output\helper::option_to_class($data['timesplitting']);
+            if (\core_analytics\manager::is_valid($realtimesplitting, '\core_analytics\local\time_splitting\base') === false) {
                 $errors['timesplitting'] = get_string('errorinvalidtimesplitting', 'analytics');
-            }
-
-            $targetclass = \tool_analytics\output\helper::option_to_class($data['target']);
-            $timesplitting = \core_analytics\manager::get_time_splitting($timesplittingclass);
-            $target = \core_analytics\manager::get_target($targetclass);
-            if (!$target->can_use_timesplitting($timesplitting)) {
-                $errors['timesplitting'] = get_string('invalidtimesplitting', 'tool_analytics');
             }
         }
 

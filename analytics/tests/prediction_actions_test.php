@@ -96,17 +96,11 @@ class analytics_prediction_actions_testcase extends advanced_testcase {
         $prediction = reset($predictions);
         $prediction->action_executed(\core_analytics\prediction::ACTION_FIXED, $this->model->get_target());
 
-        $recordset = $this->model->get_prediction_actions($this->context);
-        $this->assertCount(1, $recordset);
-        $recordset->close();
         $this->assertEquals(1, $DB->count_records('analytics_prediction_actions'));
         $action = $DB->get_record('analytics_prediction_actions', array('userid' => $this->teacher2->id));
         $this->assertEquals(\core_analytics\prediction::ACTION_FIXED, $action->actionname);
 
-        $prediction->action_executed(\core_analytics\prediction::ACTION_INCORRECTLY_FLAGGED, $this->model->get_target());
-        $recordset = $this->model->get_prediction_actions($this->context);
-        $this->assertCount(2, $recordset);
-        $recordset->close();
+        $prediction->action_executed(\core_analytics\prediction::ACTION_NOT_USEFUL, $this->model->get_target());
         $this->assertEquals(2, $DB->count_records('analytics_prediction_actions'));
     }
 
@@ -127,15 +121,9 @@ class analytics_prediction_actions_testcase extends advanced_testcase {
         list($ignored, $predictions) = $this->model->get_predictions($this->context, false);
         $this->assertCount(2, $predictions);
 
-        // Teacher 2 flags a prediction (it doesn't matter which one).
+        // Teacher 2 flags a prediction (it doesn't matter which one) as fixed.
         $prediction = reset($predictions);
         $prediction->action_executed(\core_analytics\prediction::ACTION_FIXED, $this->model->get_target());
-        $prediction->action_executed(\core_analytics\prediction::ACTION_NOT_APPLICABLE, $this->model->get_target());
-        $prediction->action_executed(\core_analytics\prediction::ACTION_INCORRECTLY_FLAGGED, $this->model->get_target());
-
-        $recordset = $this->model->get_prediction_actions($this->context);
-        $this->assertCount(3, $recordset);
-        $recordset->close();
 
         list($ignored, $predictions) = $this->model->get_predictions($this->context, true);
         $this->assertCount(1, $predictions);
@@ -148,9 +136,5 @@ class analytics_prediction_actions_testcase extends advanced_testcase {
         $this->assertCount(2, $predictions);
         list($ignored, $predictions) = $this->model->get_predictions($this->context, false);
         $this->assertCount(2, $predictions);
-
-        $recordset = $this->model->get_prediction_actions($this->context);
-        $this->assertCount(3, $recordset);
-        $recordset->close();
     }
 }

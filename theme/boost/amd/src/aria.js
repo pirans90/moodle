@@ -186,7 +186,6 @@ define(['jquery', 'core/pending'], function($, Pending) {
             });
 
             // After page load, focus on any element with special autofocus attribute.
-            var delayedFocusPromise = new Pending('core/aria:delayed-focus');
             $(function() {
                 window.setTimeout(function(pendingPromise) {
                     var alerts = $('[role="alert"][data-aria-autofocus="true"]');
@@ -195,7 +194,7 @@ define(['jquery', 'core/pending'], function($, Pending) {
                         $(alerts[0]).focus();
                     }
                     pendingPromise.resolve();
-                }, 300, delayedFocusPromise);
+                }, 300, new Pending('core/aria:delayed-focus'));
             });
         }
     };

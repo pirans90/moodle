@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f3e6814cafec1673c1fa51dea8a41306",
+    "content-hash": "563c5366d69fea69cea6809ac2f410cf",
     "packages": [],
     "packages-dev": [
         {
@@ -915,7 +915,7 @@
         },
         {
             "name": "moodlehq/behat-extension",
-            "version": "v3.38.2",
+            "version": "v3.37.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/moodlehq/moodle-behat-extension.git",

@@ -29,8 +29,6 @@ define([
     'mod_forum/subscription_toggle',
     'mod_forum/selectors',
     'mod_forum/repository',
-    'core/pubsub',
-    'mod_forum/forum_events',
 ], function(
     $,
     Templates,
@@ -38,23 +36,9 @@ define([
     Notification,
     SubscriptionToggle,
     Selectors,
-    Repository,
-    PubSub,
-    ForumEvents
+    Repository
 ) {
     var registerEventListeners = function(root) {
-        PubSub.subscribe(ForumEvents.SUBSCRIPTION_TOGGLED, function(data) {
-            var discussionId = data.discussionId;
-            var subscribed = data.subscriptionState;
-            var subscribedLabel = root.find(Selectors.discussion.item + '[data-discussionid= ' + discussionId + '] '
-                + Selectors.discussion.subscribedLabel);
-            if (subscribed) {
-                subscribedLabel.removeAttr('hidden');
-            } else {
-                subscribedLabel.attr('hidden', true);
-            }
-        });
-
         root.on('click', Selectors.favourite.toggle, function() {
             var toggleElement = $(this);
             var forumId = toggleElement.data('forumid');
@@ -89,13 +73,10 @@ define([
             Repository.setDiscussionLockState(forumId, discussionId, state)
                 .then(function(context) {
                     var icon = toggleElement.parents(Selectors.summary.actions).find(Selectors.lock.icon);
-                    var lockedLabel = toggleElement.parents(Selectors.discussion.item).find(Selectors.discussion.lockedLabel);
                     if (context.locked) {
                         icon.removeClass('hidden');
-                        lockedLabel.removeAttr('hidden');
                     } else {
                         icon.addClass('hidden');
-                        lockedLabel.attr('hidden', true);
                     }
                     return context;
                 })
@@ -123,12 +104,7 @@ define([
 
     return {
         init: function(root) {
-            SubscriptionToggle.init(root, true, function(toggleElement, context) {
-                return Templates.render('mod_forum/discussion_subscription_toggle', context)
-                    .then(function(html, js) {
-                        return Templates.replaceNode(toggleElement, html, js);
-                    });
-            });
+            SubscriptionToggle.init(root);
             registerEventListeners(root);
         }
     };

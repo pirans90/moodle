@@ -48,7 +48,7 @@ class manager {
     /**
      * @var \core_analytics\predictor[]
      */
-    protected static $predictionprocessors = [];
+    protected static $predictionprocessors = null;
 
     /**
      * @var \core_analytics\local\target\base[]
@@ -100,22 +100,6 @@ class manager {
     }
 
     /**
-     * Is analytics enabled globally?
-     *
-     * return bool
-     */
-    public static function is_analytics_enabled(): bool {
-        global $CFG;
-
-        if (isset($CFG->enableanalytics)) {
-            return $CFG->enableanalytics;
-        }
-
-        // Enabled by default.
-        return true;
-    }
-
-    /**
      * Returns all system models that match the provided filters.
      *
      * @param bool $enabled
@@ -159,10 +143,6 @@ class manager {
                 $models[$modelobj->id] = $model;
             }
         }
-
-        // Sort the models by the model name using the current session language.
-        \core_collator::asort_objects_by_method($models, 'get_name');
-
         return $models;
     }
 
@@ -227,14 +207,6 @@ class manager {
             $predictionprocessors[$classfullpath] = self::get_predictions_processor($classfullpath, false);
         }
         return $predictionprocessors;
-    }
-
-    /**
-     * Resets the cached prediction processors.
-     * @return null
-     */
-    public static function reset_prediction_processors() {
-        self::$predictionprocessors = [];
     }
 
     /**
@@ -508,9 +480,6 @@ class manager {
     /**
      * Returns the models with insights at the provided context.
      *
-     * Note that this method is used for display purposes. It filters out models whose insights
-     * are not linked from the reports page.
-     *
      * @param \context $context
      * @return \core_analytics\model[]
      */
@@ -521,50 +490,11 @@ class manager {
         $models = self::get_all_models(true, true, $context);
         foreach ($models as $key => $model) {
             // Check that it not only have predictions but also generates insights from them.
-            if (!$model->uses_insights() || !$model->get_target()->link_insights_report()) {
+            if (!$model->uses_insights()) {
                 unset($models[$key]);
             }
         }
         return $models;
-    }
-
-    /**
-     * Returns the models that generated insights in the provided context. It can also be used to add new models to the context.
-     *
-     * Note that if you use this function with $newmodelid is the caller responsibility to ensure that the
-     * provided model id generated insights for the provided context.
-     *
-     * @throws \coding_exception
-     * @param  \context $context
-     * @param  int|null $newmodelid A new model to add to the list of models with insights in the provided context.
-     * @return int[]
-     */
-    public static function cached_models_with_insights(\context $context, int $newmodelid = null) {
-
-        $cache = \cache::make('core', 'contextwithinsights');
-        $modelids = $cache->get($context->id);
-        if ($modelids === false) {
-            // The cache is empty, but we don't know if it is empty because there are no insights
-            // in this context or because cache/s have been purged, we need to be conservative and
-            // "pay" 1 db read to fill up the cache.
-
-            $models = \core_analytics\manager::get_models_with_insights($context);
-
-            if ($newmodelid && empty($models[$newmodelid])) {
-                throw new \coding_exception('The provided modelid ' . $newmodelid . ' did not generate any insights');
-            }
-
-            $modelids = array_keys($models);
-            $cache->set($context->id, $modelids);
-
-        } else if ($newmodelid && !in_array($newmodelid, $modelids)) {
-            // We add the context we got as an argument to the cache.
-
-            array_push($modelids, $newmodelid);
-            $cache->set($context->id, $modelids);
-        }
-
-        return $modelids;
     }
 
     /**
@@ -619,32 +549,30 @@ class manager {
     public static function cleanup() {
         global $DB;
 
-        $DB->execute("DELETE FROM {analytics_prediction_actions} WHERE predictionid IN
-                          (SELECT ap.id FROM {analytics_predictions} ap
-                        LEFT JOIN {context} ctx ON ap.contextid = ctx.id
-                            WHERE ctx.id IS NULL)");
+        // Clean up stuff that depends on contexts that do not exist anymore.
+        $sql = "SELECT DISTINCT ap.contextid FROM {analytics_predictions} ap
+                  LEFT JOIN {context} ctx ON ap.contextid = ctx.id
+                 WHERE ctx.id IS NULL";
+        $apcontexts = $DB->get_records_sql($sql);
 
-        $contextsql = "SELECT id FROM {context} ctx";
-        $DB->delete_records_select('analytics_predictions', "contextid NOT IN ($contextsql)");
-        $DB->delete_records_select('analytics_indicator_calc', "contextid NOT IN ($contextsql)");
+        $sql = "SELECT DISTINCT aic.contextid FROM {analytics_indicator_calc} aic
+                  LEFT JOIN {context} ctx ON aic.contextid = ctx.id
+                 WHERE ctx.id IS NULL";
+        $indcalccontexts = $DB->get_records_sql($sql);
+
+        $contexts = $apcontexts + $indcalccontexts;
+        if ($contexts) {
+            list($sql, $params) = $DB->get_in_or_equal(array_keys($contexts));
+            $DB->execute("DELETE FROM {analytics_prediction_actions} WHERE predictionid IN
+                (SELECT ap.id FROM {analytics_predictions} ap WHERE ap.contextid $sql)", $params);
+
+            $DB->delete_records_select('analytics_predictions', "contextid $sql", $params);
+            $DB->delete_records_select('analytics_indicator_calc', "contextid $sql", $params);
+        }
 
         // Clean up stuff that depends on analysable ids that do not exist anymore.
-
         $models = self::get_all_models();
         foreach ($models as $model) {
-
-            // We first dump into memory the list of analysables we have in the database (we could probably do this with 1 single
-            // query for the 3 tables, but it may be safer to do it separately).
-            $predictsamplesanalysableids = $DB->get_fieldset_select('analytics_predict_samples', 'DISTINCT analysableid',
-                'modelid = :modelid', ['modelid' => $model->get_id()]);
-            $predictsamplesanalysableids = array_flip($predictsamplesanalysableids);
-            $trainsamplesanalysableids = $DB->get_fieldset_select('analytics_train_samples', 'DISTINCT analysableid',
-                'modelid = :modelid', ['modelid' => $model->get_id()]);
-            $trainsamplesanalysableids = array_flip($trainsamplesanalysableids);
-            $usedanalysablesanalysableids = $DB->get_fieldset_select('analytics_used_analysables', 'DISTINCT analysableid',
-                'modelid = :modelid', ['modelid' => $model->get_id()]);
-            $usedanalysablesanalysableids = array_flip($usedanalysablesanalysableids);
-
             $analyser = $model->get_analyser(array('notimesplitting' => true));
             $analysables = $analyser->get_analysables_iterator();
 
@@ -653,28 +581,17 @@ class manager {
                 if (!$analysable) {
                     continue;
                 }
-                unset($predictsamplesanalysableids[$analysable->get_id()]);
-                unset($trainsamplesanalysableids[$analysable->get_id()]);
-                unset($usedanalysablesanalysableids[$analysable->get_id()]);
+                $analysableids[] = $analysable->get_id();
+            }
+            if (empty($analysableids)) {
+                continue;
             }
 
-            $param = ['modelid' => $model->get_id()];
+            list($notinsql, $params) = $DB->get_in_or_equal($analysableids, SQL_PARAMS_NAMED, 'param', false);
+            $params['modelid'] = $model->get_id();
 
-            if ($predictsamplesanalysableids) {
-                list($idssql, $idsparams) = $DB->get_in_or_equal(array_flip($predictsamplesanalysableids), SQL_PARAMS_NAMED);
-                $DB->delete_records_select('analytics_predict_samples', "modelid = :modelid AND analysableid $idssql",
-                    $param + $idsparams);
-            }
-            if ($trainsamplesanalysableids) {
-                list($idssql, $idsparams) = $DB->get_in_or_equal(array_flip($trainsamplesanalysableids), SQL_PARAMS_NAMED);
-                $DB->delete_records_select('analytics_train_samples', "modelid = :modelid AND analysableid $idssql",
-                    $param + $idsparams);
-            }
-            if ($usedanalysablesanalysableids) {
-                list($idssql, $idsparams) = $DB->get_in_or_equal(array_flip($usedanalysablesanalysableids), SQL_PARAMS_NAMED);
-                $DB->delete_records_select('analytics_used_analysables', "modelid = :modelid AND analysableid $idssql",
-                    $param + $idsparams);
-            }
+            $DB->delete_records_select('analytics_predict_samples', "modelid = :modelid AND analysableid $notinsql", $params);
+            $DB->delete_records_select('analytics_train_samples', "modelid = :modelid AND analysableid $notinsql", $params);
         }
     }
 

@@ -774,8 +774,7 @@ class api {
     public static function can_create_data_deletion_request_for_self(int $userid = null): bool {
         global $USER;
         $userid = $userid ?: $USER->id;
-        return has_capability('tool/dataprivacy:requestdelete', \context_user::instance($userid), $userid)
-            && !is_primary_admin($userid);
+        return has_capability('tool/dataprivacy:requestdelete', \context_user::instance($userid), $userid);
     }
 
     /**
@@ -804,7 +803,7 @@ class api {
         global $USER;
         $requesterid = $requesterid ?: $USER->id;
         return has_capability('tool/dataprivacy:makedatadeletionrequestsforchildren', \context_user::instance($userid),
-            $requesterid) && !is_primary_admin($userid);
+            $requesterid);
     }
 
     /**

@@ -42,6 +42,7 @@ class mod_forum_vaults_forum_testcase extends advanced_testcase {
      * Test get_from_id.
      *
      * @covers ::get_from_id
+     * @covers ::<!public>
      */
     public function test_get_from_id() {
         $this->resetAfterTest();
@@ -62,6 +63,7 @@ class mod_forum_vaults_forum_testcase extends advanced_testcase {
      * Test get_from_course_module_id.
      *
      * @covers ::get_from_course_module_id
+     * @covers ::<!public>
      */
     public function test_get_from_course_module_id() {
         $this->resetAfterTest();
@@ -88,6 +90,7 @@ class mod_forum_vaults_forum_testcase extends advanced_testcase {
      * Test get_from_course_module_ids.
      *
      * @covers ::get_from_course_module_ids
+     * @covers ::<!public>
      */
     public function test_get_from_course_module_ids() {
         $this->resetAfterTest();
@@ -126,6 +129,7 @@ class mod_forum_vaults_forum_testcase extends advanced_testcase {
      * Test get_from_post_id.
      *
      * @covers ::get_from_post_id
+     * @covers ::<!public>
      */
     public function test_get_from_post_id() {
         $this->resetAfterTest();

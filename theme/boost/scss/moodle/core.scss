@@ -2158,13 +2158,13 @@ div.editor_atto_toolbar button .icon {
     }
 }
 
-$switch-height: 1.25rem !default;
+$switch-height: ($input-height-inner * .8) !default;
 $switch-height-half: ($switch-height / 2) !default;
 $switch-border-radius: $switch-height !default;
-$switch-bg: $gray-300 !default;
+$switch-bg: $custom-control-indicator-bg !default;
 $switch-checked-bg: map-get($theme-colors, 'primary') !default;
-$switch-disabled-bg: $gray-200 !default;
-$switch-disabled-color: $gray-600 !default;
+$switch-disabled-bg: $custom-control-indicator-disabled-bg !default;
+$switch-disabled-color: $custom-control-label-disabled-color !default;
 $switch-thumb-bg: $white !default;
 $switch-thumb-border-radius: 50% !default;
 $switch-thumb-padding: 2px !default;
@@ -2258,10 +2258,6 @@ $switch-transition: .2s all !default;
     text-decoration: none !important; /* stylelint-disable-line declaration-no-important */
 }
 
-.colour-inherit {
-    color: inherit !important; /* stylelint-disable-line declaration-no-important */
-}
-
 .position-right {
     right: 0 !important; /* stylelint-disable-line declaration-no-important */
 }
@@ -2276,12 +2272,4 @@ $switch-transition: .2s all !default;
 
 .z-index-1 {
     z-index: 1 !important; /* stylelint-disable-line declaration-no-important */
-}
-
-// These floats are deprecated in Bootstrap 4.3.1. It is still okay to use them in Moodle.
-.float-left {
-    float: left !important; /* stylelint-disable-line declaration-no-important */
-}
-.float-right {
-    float: right !important; /* stylelint-disable-line declaration-no-important */
 }

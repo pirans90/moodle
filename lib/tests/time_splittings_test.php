@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once(__DIR__ . '/../../analytics/tests/fixtures/test_timesplitting_seconds.php');
 require_once(__DIR__ . '/../../analytics/tests/fixtures/test_timesplitting_upcoming_seconds.php');
+require_once(__DIR__ . '/../../analytics/tests/fixtures/test_timesplitting_weekly.php');
 require_once(__DIR__ . '/../../lib/enrollib.php');
 
 /**
@@ -196,38 +197,23 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
 
         // Using a finished course.
 
-        $pastweek = new \core\analytics\time_splitting\past_week();
-        $pastweek->set_analysable($this->analysable);
-        $this->assertCount(1, $pastweek->get_distinct_ranges());
+        $weekly = new test_timesplitting_weekly();
+        $weekly->set_analysable($this->analysable);
+        $this->assertCount(1, $weekly->get_distinct_ranges());
 
-        $ranges = $pastweek->get_all_ranges();
+        $ranges = $weekly->get_all_ranges();
         $this->assertEquals(52, count($ranges));
         $this->assertEquals($this->course->startdate, $ranges[0]['start']);
         $this->assertNotEquals($this->course->startdate, $ranges[0]['time']);
 
         // The analysable is finished so all ranges are available for training.
-        $this->assertCount(count($ranges), $pastweek->get_training_ranges());
+        $this->assertCount(count($ranges), $weekly->get_training_ranges());
 
-        $ranges = $pastweek->get_most_recent_prediction_range();
+        $ranges = $weekly->get_most_recent_prediction_range();
         $range = reset($ranges);
         $this->assertEquals(51, key($ranges));
 
-        // We now use an ongoing course not yet ready to generate predictions.
-
-        $threedaysago = new DateTime('-3 days');
-        $params = array(
-            'startdate' => $threedaysago->getTimestamp(),
-        );
-        $ongoingcourse = $this->getDataGenerator()->create_course($params);
-        $ongoinganalysable = new \core_analytics\course($ongoingcourse);
-
-        $pastweek = new \core\analytics\time_splitting\past_week();
-        $pastweek->set_analysable($ongoinganalysable);
-        $ranges = $pastweek->get_all_ranges();
-        $this->assertEquals(0, count($ranges));
-        $this->assertCount(0, $pastweek->get_training_ranges());
-
-        // We now use a ready-to-predict ongoing course.
+        // We now use an ongoing course.
 
         $onemonthago = new DateTime('-30 days');
         $params = array(
@@ -236,24 +222,20 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         $ongoingcourse = $this->getDataGenerator()->create_course($params);
         $ongoinganalysable = new \core_analytics\course($ongoingcourse);
 
-        $pastweek = new \core\analytics\time_splitting\past_week();
-        $pastweek->set_analysable($ongoinganalysable);
-        $this->assertCount(1, $pastweek->get_distinct_ranges());
+        $weekly = new test_timesplitting_weekly();
+        $weekly->set_analysable($ongoinganalysable);
+        $this->assertCount(1, $weekly->get_distinct_ranges());
 
-        $ranges = $pastweek->get_all_ranges();
+        $ranges = $weekly->get_all_ranges();
         $this->assertEquals(4, count($ranges));
-        $this->assertCount(4, $pastweek->get_training_ranges());
+        $this->assertCount(4, $weekly->get_training_ranges());
 
-        $ranges = $pastweek->get_most_recent_prediction_range();
+        $ranges = $weekly->get_most_recent_prediction_range();
         $range = reset($ranges);
         $this->assertEquals(3, key($ranges));
-        $this->assertEquals(time(), $range['time'], '', 1);
-        // 1 second delta for the start just in case a second passes between the set_analysable call
-        // and this checking below.
-        $time = new \DateTime();
-        $time->sub($pastweek->periodicity());
-        $this->assertEquals($time->getTimestamp(), $range['start'], '', 1.0);
-        $this->assertEquals(time(), $range['end'], '', 1);
+        $this->assertLessThan(time(), $range['time']);
+        $this->assertLessThan(time(), $range['start']);
+        $this->assertLessThan(time(), $range['end']);
 
         $starttime = time();
 
@@ -264,8 +246,8 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         $ranges = $upcomingweek->get_all_ranges();
         $this->assertEquals(1, count($ranges));
         $range = reset($ranges);
-        $this->assertEquals(time(), $range['time'], '', 1);
-        $this->assertEquals(time(), $range['start'], '', 1);
+        $this->assertLessThan(time(), $range['time']);
+        $this->assertLessThan(time(), $range['start']);
         $this->assertGreaterThan(time(), $range['end']);
 
         $this->assertCount(0, $upcomingweek->get_training_ranges());
@@ -273,10 +255,12 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         $ranges = $upcomingweek->get_most_recent_prediction_range();
         $range = reset($ranges);
         $this->assertEquals(0, key($ranges));
-        $this->assertEquals(time(), $range['time'], '', 1);
-        $this->assertEquals(time(), $range['start'], '', 1);
-        $this->assertGreaterThanOrEqual($starttime, $range['time']);
-        $this->assertGreaterThanOrEqual($starttime, $range['start']);
+        $this->assertLessThan(time(), $range['time']);
+        $this->assertLessThan(time(), $range['start']);
+        // We substract 1 because upcoming_periodic also has that -1 so that predictions
+        // get executed once the first time range is set.
+        $this->assertGreaterThanOrEqual($starttime - 1, $range['time']);
+        $this->assertGreaterThanOrEqual($starttime - 1, $range['start']);
         $this->assertGreaterThan(time(), $range['end']);
 
         $this->assertNotEmpty($upcomingweek->get_range_by_index(0));
@@ -296,8 +280,7 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         $seconds->set_analysable($analysable);
 
         // Store the ranges we just obtained.
-        $ranges = $seconds->get_all_ranges();
-        $nranges = count($ranges);
+        $nranges = count($seconds->get_all_ranges());
         $ntrainingranges = count($seconds->get_training_ranges());
         $mostrecentrange = $seconds->get_most_recent_prediction_range();
         $mostrecentrange = reset($mostrecentrange);
@@ -308,8 +291,7 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         // We set the analysable again so the time ranges are recalculated.
         $seconds->set_analysable($analysable);
 
-        $newranges = $seconds->get_all_ranges();
-        $nnewranges = count($newranges);
+        $nnewranges = $seconds->get_all_ranges();
         $nnewtrainingranges = $seconds->get_training_ranges();
         $newmostrecentrange = $seconds->get_most_recent_prediction_range();
         $newmostrecentrange = reset($newmostrecentrange);
@@ -317,67 +299,25 @@ class core_analytics_time_splittings_testcase extends advanced_testcase {
         $this->assertGreaterThan($ntrainingranges, $nnewtrainingranges);
         $this->assertGreaterThan($mostrecentrange['time'], $newmostrecentrange['time']);
 
-        // All the ranges but the last one should return the same values.
-        array_pop($ranges);
-        array_pop($newranges);
-        foreach ($ranges as $key => $range) {
-            $this->assertEquals($newranges[$key]['start'], $range['start']);
-            $this->assertEquals($newranges[$key]['end'], $range['end']);
-            $this->assertEquals($newranges[$key]['time'], $range['time']);
-        }
-
-        // Fake model id, we can use any int, we will need to reference it later.
-        $modelid = 1505347200;
-
-        $upcomingseconds = new test_timesplitting_upcoming_seconds();
-        $upcomingseconds->set_modelid($modelid);
-        $upcomingseconds->set_analysable($analysable);
+        $seconds = new test_timesplitting_upcoming_seconds();
+        $seconds->set_analysable($analysable);
 
         // Store the ranges we just obtained.
-        $ranges = $upcomingseconds->get_all_ranges();
-        $nranges = count($ranges);
-        $ntrainingranges = count($upcomingseconds->get_training_ranges());
-        $mostrecentrange = $upcomingseconds->get_most_recent_prediction_range();
+        $nranges = count($seconds->get_all_ranges());
+        $ntrainingranges = count($seconds->get_training_ranges());
+        $mostrecentrange = $seconds->get_most_recent_prediction_range();
         $mostrecentrange = reset($mostrecentrange);
-
-        // Mimic the modelfirstanalyses caching in \core_analytics\analysis.
-        $this->mock_cache_first_analysis_caching($modelid, $analysable->get_id(), end($ranges));
 
         // We wait for the next range to be added.
         usleep(1000000);
 
-        // We set the analysable again so the time ranges are recalculated.
-        $upcomingseconds->set_analysable($analysable);
-
-        $newranges = $upcomingseconds->get_all_ranges();
-        $nnewranges = count($newranges);
-        $nnewtrainingranges = $upcomingseconds->get_training_ranges();
-        $newmostrecentrange = $upcomingseconds->get_most_recent_prediction_range();
+        $seconds->set_analysable($analysable);
+        $nnewranges = $seconds->get_all_ranges();
+        $nnewtrainingranges = $seconds->get_training_ranges();
+        $newmostrecentrange = $seconds->get_most_recent_prediction_range();
         $newmostrecentrange = reset($newmostrecentrange);
         $this->assertGreaterThan($nranges, $nnewranges);
         $this->assertGreaterThan($ntrainingranges, $nnewtrainingranges);
         $this->assertGreaterThan($mostrecentrange['time'], $newmostrecentrange['time']);
-
-        // All the ranges but the last one should return the same values.
-        array_pop($ranges);
-        array_pop($newranges);
-        foreach ($ranges as $key => $range) {
-            $this->assertEquals($newranges[$key]['start'], $range['start']);
-            $this->assertEquals($newranges[$key]['end'], $range['end']);
-            $this->assertEquals($newranges[$key]['time'], $range['time']);
-        }
-    }
-
-    /**
-     * Mocks core_analytics\analysis caching of the first time analysables were analysed.
-     *
-     * @param  int $modelid
-     * @param  int $analysableid
-     * @param  array $range
-     * @return null
-     */
-    private function mock_cache_first_analysis_caching($modelid, $analysableid, $range) {
-        $cache = \cache::make('core', 'modelfirstanalyses');
-        $cache->set($modelid . '_' . $analysableid, $range['time']);
     }
 }

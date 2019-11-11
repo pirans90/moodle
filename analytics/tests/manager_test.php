@@ -71,7 +71,7 @@ class analytics_manager_testcase extends advanced_testcase {
         $predictions = $DB->get_records('analytics_predictions');
         $prediction = reset($predictions);
         $prediction = new \core_analytics\prediction($prediction, array('whatever' => 'not used'));
-        $prediction->action_executed(\core_analytics\prediction::ACTION_USEFUL, $model->get_target());
+        $prediction->action_executed(\core_analytics\prediction::ACTION_FIXED, $model->get_target());
 
         $predictioncontextid = $prediction->get_prediction_data()->contextid;
 
@@ -134,9 +134,8 @@ class analytics_manager_testcase extends advanced_testcase {
         $model->train();
         $model->predict();
 
-        $this->assertNotEmpty($DB->count_records('analytics_predict_samples'));
-        $this->assertNotEmpty($DB->count_records('analytics_train_samples'));
-        $this->assertNotEmpty($DB->count_records('analytics_used_analysables'));
+        $npredictsamples = $DB->count_records('analytics_predict_samples');
+        $ntrainsamples = $DB->count_records('analytics_train_samples');
 
         // Now we delete an analysable, stored predict and training samples should be deleted.
         $deletedcontext = \context_course::instance($coursepredict1->id);
@@ -146,7 +145,6 @@ class analytics_manager_testcase extends advanced_testcase {
 
         $this->assertEmpty($DB->count_records('analytics_predict_samples', array('analysableid' => $coursepredict1->id)));
         $this->assertEmpty($DB->count_records('analytics_train_samples', array('analysableid' => $coursepredict1->id)));
-        $this->assertEmpty($DB->count_records('analytics_used_analysables', array('analysableid' => $coursepredict1->id)));
 
         set_config('enabled_stores', '', 'tool_log');
         get_log_manager(true);
@@ -365,14 +363,10 @@ class analytics_manager_testcase extends advanced_testcase {
         $noteaching = \core_analytics\manager::get_target('\core_course\analytics\target\no_teaching');
         $dropout = \core_analytics\manager::get_target('\core_course\analytics\target\course_dropout');
         $upcomingactivities = \core_analytics\manager::get_target('\core_user\analytics\target\upcoming_activities_due');
-        $norecentaccesses = \core_analytics\manager::get_target('\core_course\analytics\target\no_recent_accesses');
-        $noaccesssincestart = \core_analytics\manager::get_target('\core_course\analytics\target\no_access_since_course_start');
 
         $this->assertTrue(\core_analytics\model::exists($noteaching));
         $this->assertTrue(\core_analytics\model::exists($dropout));
         $this->assertTrue(\core_analytics\model::exists($upcomingactivities));
-        $this->assertTrue(\core_analytics\model::exists($norecentaccesses));
-        $this->assertTrue(\core_analytics\model::exists($noaccesssincestart));
 
         foreach (\core_analytics\manager::get_all_models() as $model) {
             $model->delete();
@@ -381,22 +375,16 @@ class analytics_manager_testcase extends advanced_testcase {
         $this->assertFalse(\core_analytics\model::exists($noteaching));
         $this->assertFalse(\core_analytics\model::exists($dropout));
         $this->assertFalse(\core_analytics\model::exists($upcomingactivities));
-        $this->assertFalse(\core_analytics\model::exists($norecentaccesses));
-        $this->assertFalse(\core_analytics\model::exists($noaccesssincestart));
 
         $updated = \core_analytics\manager::update_default_models_for_component('moodle');
 
-        $this->assertEquals(5, count($updated));
-        $this->assertTrue(array_pop($updated) instanceof \core_analytics\model);
-        $this->assertTrue(array_pop($updated) instanceof \core_analytics\model);
+        $this->assertEquals(3, count($updated));
         $this->assertTrue(array_pop($updated) instanceof \core_analytics\model);
         $this->assertTrue(array_pop($updated) instanceof \core_analytics\model);
         $this->assertTrue(array_pop($updated) instanceof \core_analytics\model);
         $this->assertTrue(\core_analytics\model::exists($noteaching));
         $this->assertTrue(\core_analytics\model::exists($dropout));
         $this->assertTrue(\core_analytics\model::exists($upcomingactivities));
-        $this->assertTrue(\core_analytics\model::exists($norecentaccesses));
-        $this->assertTrue(\core_analytics\model::exists($noaccesssincestart));
 
         $repeated = \core_analytics\manager::update_default_models_for_component('moodle');
 

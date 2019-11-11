@@ -1201,13 +1201,20 @@ function data_user_outline($course, $user, $mod, $data) {
         }
         return $result;
     } else if ($grade) {
-        $result = (object) [
-            'time' => grade_get_date_for_user_grade($grade, $user),
-        ];
+        $result = new stdClass();
         if (!$grade->hidden || has_capability('moodle/grade:viewhidden', context_course::instance($course->id))) {
             $result->info = get_string('grade') . ': ' . $grade->str_long_grade;
         } else {
             $result->info = get_string('grade') . ': ' . get_string('hidden', 'grades');
+        }
+
+        //datesubmitted == time created. dategraded == time modified or time overridden
+        //if grade was last modified by the user themselves use date graded. Otherwise use date submitted
+        //TODO: move this copied & pasted code somewhere in the grades API. See MDL-26704
+        if ($grade->usermodified == $user->id || empty($grade->datesubmitted)) {
+            $result->time = $grade->dategraded;
+        } else {
+            $result->time = $grade->datesubmitted;
         }
 
         return $result;
@@ -1441,13 +1448,7 @@ function data_print_template($template, $records, $data, $search='', $page=0, $r
 
         $patterns[]='##delcheck##';
         if ($canmanageentries) {
-            $checkbox = new \core\output\checkbox_toggleall('listview-entries', false, [
-                'id' => "entry_{$record->id}",
-                'name' => 'delcheck[]',
-                'classes' => 'recordcheckbox',
-                'value' => $record->id,
-            ]);
-            $replacement[] = $OUTPUT->render($checkbox);
+            $replacement[] = html_writer::checkbox('delcheck[]', $record->id, false, '', array('class' => 'recordcheckbox'));
         } else {
             $replacement[] = '';
         }

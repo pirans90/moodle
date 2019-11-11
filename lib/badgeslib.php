@@ -233,16 +233,13 @@ function badges_calculate_message_schedule($schedule) {
 
     switch ($schedule) {
         case BADGE_MESSAGE_DAILY:
-            $tomorrow = new DateTime("1 day", core_date::get_server_timezone_object());
-            $nextcron = $tomorrow->getTimestamp();
+            $nextcron = time() + 60 * 60 * 24;
             break;
         case BADGE_MESSAGE_WEEKLY:
-            $nextweek = new DateTime("1 week", core_date::get_server_timezone_object());
-            $nextcron = $nextweek->getTimestamp();
+            $nextcron = time() + 60 * 60 * 24 * 7;
             break;
         case BADGE_MESSAGE_MONTHLY:
-            $nextmonth = new DateTime("1 month", core_date::get_server_timezone_object());
-            $nextcron = $nextmonth->getTimestamp();
+            $nextcron = time() + 60 * 60 * 24 * 7 * 30;
             break;
     }
 
@@ -857,6 +854,45 @@ function badges_get_badge_api_versions() {
         OPEN_BADGES_V1 => get_string('openbadgesv1', 'badges'),
         OPEN_BADGES_V2 => get_string('openbadgesv2', 'badges')
     ];
+}
+
+/**
+ * Called on install or upgrade to create default list of backpacks a user can connect to.
+ *
+ * @return void
+ */
+function badges_install_default_backpacks() {
+    global $DB;
+
+    $record = new stdClass();
+    $record->backpackweburl = BADGE_BACKPACKWEBURL;
+    $record->backpackapiurl = BADGE_BACKPACKAPIURL;
+    $record->apiversion = OPEN_BADGES_V1;
+    $record->sortorder = 0;
+    $record->password = '';
+
+    $bpid = 0;
+    if (!($bp = $DB->get_record('badge_external_backpack', array('backpackapiurl' => $record->backpackapiurl)))) {
+        $bpid = $DB->insert_record('badge_external_backpack', $record);
+    } else {
+        $bpid = $bp->id;
+    }
+    set_config('badges_site_backpack', $bpid);
+
+    // All existing backpacks default to V1.
+    $DB->set_field('badge_backpack', 'externalbackpackid', $bpid);
+
+    $record = new stdClass();
+    $record->backpackapiurl = BADGRIO_BACKPACKAPIURL;
+    $record->backpackweburl = BADGRIO_BACKPACKWEBURL;
+    $record->apiversion = OPEN_BADGES_V2;
+    $record->sortorder = 1;
+    $record->password = '';
+
+    if (!$DB->record_exists('badge_external_backpack', array('backpackapiurl' => $record->backpackapiurl))) {
+        $DB->insert_record('badge_external_backpack', $record);
+    }
+
 }
 
 /**

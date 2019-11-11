@@ -101,11 +101,11 @@ function xmldb_lesson_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2017051501, 'lesson');
     }
 
-    if ($oldversion < 2019062400) {
+    if ($oldversion < 2019052001) {
         // Delete orphaned group overrides.
         $DB->delete_records_select('lesson_overrides', 'groupid = 0 AND userid IS NULL');
 
-        upgrade_mod_savepoint(true, 2019062400, 'lesson');
+        upgrade_mod_savepoint(true, 2019052001, 'lesson');
     }
 
     // Automatically generated Moodle v3.4.0 release upgrade line.

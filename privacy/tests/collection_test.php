@@ -43,6 +43,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that adding an unknown type causes the type to be added to the collection.
      *
      * @covers ::add_type
+     * @covers ::<!public>
      */
     public function test_add_type_generic_type() {
         $collection = new collection('core_privacy');
@@ -60,6 +61,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that adding a known type works as anticipated.
      *
      * @covers ::add_type
+     * @covers ::<!public>
      */
     public function test_add_type_known_type() {
         $collection = new collection('core_privacy');
@@ -76,6 +78,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that adding multiple types returns them all.
      *
      * @covers ::add_type
+     * @covers ::<!public>
      */
     public function test_add_type_multiple() {
         $collection = new collection('core_privacy');
@@ -94,6 +97,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that the add_database_table function adds a database table.
      *
      * @covers ::add_database_table
+     * @covers ::<!public>
      */
     public function test_add_database_table() {
         $collection = new collection('core_privacy');
@@ -117,6 +121,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that the add_user_preference function adds a single user preference.
      *
      * @covers ::add_user_preference
+     * @covers ::<!public>
      */
     public function test_add_user_preference() {
         $collection = new collection('core_privacy');
@@ -138,6 +143,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that the link_external_location function links an external location.
      *
      * @covers ::link_external_location
+     * @covers ::<!public>
      */
     public function test_link_external_location() {
         $collection = new collection('core_privacy');
@@ -161,6 +167,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that the link_subsystem function links the subsystem.
      *
      * @covers ::link_subsystem
+     * @covers ::<!public>
      */
     public function test_link_subsystem() {
         $collection = new collection('core_privacy');
@@ -182,6 +189,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * Test that the link_plugintype function links the plugin.
      *
      * @covers ::link_plugintype
+     * @covers ::<!public>
      */
     public function test_link_plugintype() {
         $collection = new collection('core_privacy');
@@ -219,6 +227,7 @@ class core_privacy_metadata_collection extends advanced_testcase {
      * @dataProvider component_list_provider
      * @param   string  $component The component to test
      * @covers ::get_component
+     * @covers ::<!public>
      */
     public function test_get_component($component) {
         $collection = new collection($component);

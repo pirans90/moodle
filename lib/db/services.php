@@ -334,20 +334,6 @@ $functions = array(
         'capabilities' => 'moodle/comment:view',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
-    'core_comment_add_comments' => array(
-        'classname' => 'core_comment_external',
-        'methodname' => 'add_comments',
-        'description' => 'Adds a comment or comments.',
-        'type' => 'write',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-    ),
-    'core_comment_delete_comments' => array(
-        'classname' => 'core_comment_external',
-        'methodname' => 'delete_comments',
-        'description' => 'Deletes a comment or comments.',
-        'type' => 'write',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-    ),
     'core_completion_get_activities_completion_status' => array(
         'classname' => 'core_completion_external',
         'methodname' => 'get_activities_completion_status',
@@ -543,6 +529,15 @@ $functions = array(
         'type' => 'write',
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'core_course_get_activities_overview' => array(
+        'classname' => 'core_course_external',
+        'methodname' => 'get_activities_overview',
+        'classpath' => 'course/externallib.php',
+        'description' => '** DEPRECATED ** Please do not call this function any more.
+                          Return activities overview for the given courses.',
+        'type' => 'read',
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
     'core_course_get_user_navigation_options' => array(
         'classname' => 'core_course_external',
         'methodname' => 'get_user_navigation_options',
@@ -648,15 +643,6 @@ $functions = array(
         'type' => 'read',
         'capabilities' => 'moodle/course:enrolreview'
     ),
-    'core_enrol_search_users' => [
-        'classname' => 'core_enrol_external',
-        'methodname' => 'search_users',
-        'classpath' => 'enrol/externallib.php',
-        'description' => 'Search within the list of course participants',
-        'ajax' => true,
-        'type' => 'read',
-        'capabilities' => 'moodle/course:viewparticipants',
-    ],
     'core_enrol_get_users_courses' => array(
         'classname' => 'core_enrol_external',
         'methodname' => 'get_users_courses',
@@ -670,16 +656,7 @@ $functions = array(
         'classname' => 'core_enrol_external',
         'methodname' => 'edit_user_enrolment',
         'classpath' => 'enrol/externallib.php',
-        'description' => '** DEPRECATED ** Please do not call this function any more.
-                          External function that updates a given user enrolment',
-        'type' => 'write',
-        'ajax' => true,
-    ),
-    'core_enrol_submit_user_enrolment_form' => array(
-        'classname' => 'core_enrol_external',
-        'methodname' => 'submit_user_enrolment_form',
-        'classpath' => 'enrol/externallib.php',
-        'description' => 'Submit form data for enrolment form',
+        'description' => 'External function that updates a given user enrolment',
         'type' => 'write',
         'ajax' => true,
     ),
@@ -698,22 +675,6 @@ $functions = array(
         'description' => 'Return a list of notifications for the current session',
         'type' => 'read',
         'loginrequired' => false,
-        'ajax' => true,
-    ),
-    'core_session_touch' => array(
-        'classname' => 'core\session\external',
-        'methodname' => 'touch_session',
-        'description' => 'Keep the users session alive',
-        'type' => 'read',
-        'loginrequired' => true,
-        'ajax' => true,
-    ),
-    'core_session_time_remaining' => array(
-        'classname' => 'core\session\external',
-        'methodname' => 'time_remaining',
-        'description' => 'Count the seconds remaining in this session',
-        'type' => 'read',
-        'loginrequired' => true,
         'ajax' => true,
     ),
     'core_files_get_files' => array(
@@ -894,7 +855,6 @@ $functions = array(
         'classpath' => 'group/externallib.php',
         'description' => 'Returns all groupings in specified course.',
         'type' => 'read',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'core_group_get_course_groups' => array(
         'classname' => 'core_group_external',
@@ -903,8 +863,7 @@ $functions = array(
         'description' => 'Returns all groups in specified course.',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:managegroups',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+        'capabilities' => 'moodle/course:managegroups'
     ),
     'core_group_get_course_user_groups' => array(
         'classname' => 'core_group_external',
@@ -1998,24 +1957,6 @@ $functions = array(
         'description'  => 'Re-order a competency.',
         'type'         => 'write',
         'capabilities' => 'moodle/competency:competencymanage',
-        'ajax'         => true,
-    ),
-    'core_competency_list_course_module_competencies' => array(
-        'classname'    => 'core_competency\external',
-        'methodname'   => 'list_course_module_competencies',
-        'classpath'    => '',
-        'description'  => 'List the competencies in a course module',
-        'type'         => 'read',
-        'capabilities' => 'moodle/competency:coursecompetencyview',
-        'ajax'         => true,
-    ),
-    'core_competency_count_course_module_competencies' => array(
-        'classname'    => 'core_competency\external',
-        'methodname'   => 'count_course_module_competencies',
-        'classpath'    => '',
-        'description'  => 'Count the competencies in a course module',
-        'type'         => 'read',
-        'capabilities' => 'moodle/competency:coursecompetencyview',
         'ajax'         => true,
     ),
     'core_competency_list_course_competencies' => array(

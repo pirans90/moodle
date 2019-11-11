@@ -273,7 +273,22 @@ span.unread {
 .path-mod-forum .discussion-nav ul {
     margin: 0;
     list-style: none;
-    padding-left: 0;
+}
+
+.path-mod-forum .discussion-nav .prev-discussion:before {
+    /*rtl:raw:
+    content: ' ► ';
+    */
+    /*rtl:remove*/
+    content: ' ◄ ';
+}
+
+.path-mod-forum .discussion-nav .next-discussion:after {
+    /*rtl:raw:
+    content: ' ◄ ';
+    */
+    /*rtl:remove*/
+    content: ' ► ';
 }
 
 .path-mod-forum .discussion-nav .next-discussion {
