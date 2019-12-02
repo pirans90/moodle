@@ -87,6 +87,7 @@ class block_globalsearch extends block_base {
         // Search button.
         $this->content->text .= html_writer::tag('button', get_string('search', 'search'),
             array('id' => 'searchform_button', 'type' => 'submit', 'title' => 'globalsearch', 'class' => 'btn btn-secondary'));
+
         $this->content->text .= html_writer::end_tag('fieldset');
         $this->content->text .= html_writer::end_tag('form');
         $this->content->text .= html_writer::end_tag('div');
