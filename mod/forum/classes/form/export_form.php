@@ -54,8 +54,19 @@ class export_form extends \moodleform {
             'multiple' => true,
             'noselectionstring' => get_string('allusers', 'mod_forum'),
             'courseid' => $forum->get_course_id(),
+                'valuehtmlcallback' => function($value) {
+                    global $OUTPUT;
+
+                    $allusernames = get_all_user_name_fields(true);
+                    $fields = 'id, ' . $allusernames;
+                    $user = \core_user::get_user($value, $fields);
+                    $useroptiondata = [
+                        'fullname' => fullname($user),
+                    ];
+                    return $OUTPUT->render_from_template('mod_forum/form-user-selector-suggestion', $useroptiondata);
+                }
         ];
-        $mform->addElement('autocomplete', 'userids', get_string('users'), [], $options);
+        $mform->addElement('autocomplete', 'useridsselected', get_string('users'), [], $options);
 
         // Get the discussions on this forum.
         $vaultfactory = \mod_forum\local\container::get_vault_factory();
@@ -69,6 +80,12 @@ class export_form extends \moodleform {
         ];
         $mform->addElement('autocomplete', 'discussionids', get_string('discussions', 'mod_forum'), $discussions, $options);
 
+        // Date fields.
+        $mform->addElement('date_time_selector', 'from', get_string('postsfrom', 'mod_forum'),
+                ['optional' => true]);
+        $mform->addElement('date_time_selector', 'to', get_string('poststo', 'mod_forum'),
+                ['optional' => true]);
+
         // Export formats.
         $formats = \core_plugin_manager::instance()->get_plugins_of_type('dataformat');
         $options = [];
@@ -76,6 +93,15 @@ class export_form extends \moodleform {
             $options[$format->name] = $format->displayname;
         }
         $mform->addElement('select', 'format', 'Format', $options);
+
+        $mform->addElement('header', 'optionsheader', get_string('exportoptions', 'mod_forum'));
+
+        $mform->addElement('checkbox', 'striphtml', '', get_string('exportstriphtml', 'mod_forum'));
+        $mform->addHelpButton('striphtml', 'exportstriphtml', 'mod_forum');
+
+        $mform->addElement('checkbox', 'humandates', '', get_string('exporthumandates', 'mod_forum'));
+        $mform->addHelpButton('humandates', 'exporthumandates', 'mod_forum');
+
         $this->add_action_buttons(true, get_string('export', 'mod_forum'));
     }
 }
