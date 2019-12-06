@@ -67,6 +67,9 @@ class block_globalsearch extends block_base {
         $url = new moodle_url('/search/index.php');
         $this->content->footer .= html_writer::link($url, get_string('advancedsearch', 'search'));
 
+        $this->content->footer .= html_writer::link($url, get_string('ahfhf', 'myprofile'));
+
+
         $this->content->text  = html_writer::start_tag('div', array('class' => 'searchform'));
         $this->content->text .= html_writer::start_tag('form', array('action' => $url->out()));
         $this->content->text .= html_writer::start_tag('fieldset', array('action' => 'invisiblefieldset'));

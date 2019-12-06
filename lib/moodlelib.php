@@ -3258,6 +3258,8 @@ function require_user_key_login($script, $instance = null, $keyvalue = null) {
         print_error('invaliduserid');
     }
 
+    core_user::require_active_user($user, true, true);
+
     // Emulate normal session.
     enrol_check_plugins($user);
     \core\session\manager::set_user($user);
@@ -5734,7 +5736,7 @@ function moodle_process_email($modargs, $body) {
     global $DB;
 
     // The first char should be an unencoded letter. We'll take this as an action.
-    switch ($modargs{0}) {
+    switch ($modargs[0]) {
         case 'B': { // Bounce.
             list(, $userid) = unpack('V', base64_decode(substr($modargs, 1, 8)));
             if ($user = $DB->get_record("user", array('id' => $userid), "id,email")) {

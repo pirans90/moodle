@@ -1687,7 +1687,7 @@ class core_plugin_manager {
                 'equation', 'fontcolor', 'html', 'image', 'indent', 'italic',
                 'link', 'managefiles', 'media', 'noautolink', 'orderedlist',
                 'recordrtc', 'rtl', 'strike', 'subscript', 'superscript', 'table',
-                'title', 'underline', 'undo', 'unorderedlist', 'h5p'
+                'title', 'underline', 'undo', 'unorderedlist', 'h5p', 'emojipicker',
             ),
 
             'assignment' => array(
@@ -1778,12 +1778,16 @@ class core_plugin_manager {
 
             'filter' => array(
                 'activitynames', 'algebra', 'censor', 'emailprotect',
-                'emoticon', 'h5p', 'mathjaxloader', 'mediaplugin', 'multilang', 'tex', 'tidy',
+                'emoticon', 'displayh5p', 'mathjaxloader', 'mediaplugin', 'multilang', 'tex', 'tidy',
                 'urltolink', 'data', 'glossary'
             ),
 
             'format' => array(
                 'singleactivity', 'social', 'topics', 'weeks'
+            ),
+
+            'forumreport' => array(
+                'summary',
             ),
 
             'gradeexport' => array(

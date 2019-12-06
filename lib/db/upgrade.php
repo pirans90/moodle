@@ -3611,5 +3611,181 @@ function xmldb_main_upgrade($oldversion) {
         upgrade_main_savepoint(true, 2019100900.00);
     }
 
+    if ($oldversion < 2019101600.01) {
+
+        // Change the setting $CFG->requestcategoryselection into $CFG->lockrequestcategory with opposite value.
+        set_config('lockrequestcategory', empty($CFG->requestcategoryselection));
+
+        upgrade_main_savepoint(true, 2019101600.01);
+    }
+
+    if ($oldversion < 2019101800.02) {
+
+        // Get the table by its previous name.
+        $table = new xmldb_table('analytics_models');
+        if ($dbman->table_exists($table)) {
+
+            // Define field contextids to be added to analytics_models.
+            $field = new xmldb_field('contextids', XMLDB_TYPE_TEXT, null, null, null, null, null, 'version');
+
+            // Conditionally launch add field contextids.
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2019101800.02);
+    }
+
+    if ($oldversion < 2019102500.04) {
+        // Define table h5p_libraries to be created.
+        $table = new xmldb_table('h5p_libraries');
+
+        // Adding fields to table h5p_libraries.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('machinename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('title', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('majorversion', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('minorversion', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('patchversion', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('runnable', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('fullscreen', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('embedtypes', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('preloadedjs', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('preloadedcss', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('droplibrarycss', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('semantics', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('addto', XMLDB_TYPE_TEXT, null, null, null, null, null);
+
+        // Adding keys to table h5p_libraries.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Adding indexes to table h5p_libraries.
+        $table->add_index('machinemajorminorpatch', XMLDB_INDEX_NOTUNIQUE,
+            ['machinename', 'majorversion', 'minorversion', 'patchversion', 'runnable']);
+
+        // Conditionally launch create table for h5p_libraries.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table h5p_library_dependencies to be created.
+        $table = new xmldb_table('h5p_library_dependencies');
+
+        // Adding fields to table h5p_library_dependencies.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('libraryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('requiredlibraryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('dependencytype', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table h5p_library_dependencies.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('libraryid', XMLDB_KEY_FOREIGN, ['libraryid'], 'h5p_libraries', ['id']);
+        $table->add_key('requiredlibraryid', XMLDB_KEY_FOREIGN, ['requiredlibraryid'], 'h5p_libraries', ['id']);
+
+        // Conditionally launch create table for h5p_library_dependencies.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table h5p to be created.
+        $table = new xmldb_table('h5p');
+
+        // Adding fields to table h5p.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('jsoncontent', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('mainlibraryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('displayoptions', XMLDB_TYPE_INTEGER, '4', null, null, null, null);
+        $table->add_field('pathnamehash', XMLDB_TYPE_CHAR, '40', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('contenthash', XMLDB_TYPE_CHAR, '40', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('filtered', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table h5p.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('mainlibraryid', XMLDB_KEY_FOREIGN, ['mainlibraryid'], 'h5p_libraries', ['id']);
+
+        // Conditionally launch create table for h5p.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table h5p_contents_libraries to be created.
+        $table = new xmldb_table('h5p_contents_libraries');
+
+        // Adding fields to table h5p_contents_libraries.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('h5pid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('libraryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('dependencytype', XMLDB_TYPE_CHAR, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('dropcss', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('weight', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table h5p_contents_libraries.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('h5pid', XMLDB_KEY_FOREIGN, ['h5pid'], 'h5p', ['id']);
+        $table->add_key('libraryid', XMLDB_KEY_FOREIGN, ['libraryid'], 'h5p_libraries', ['id']);
+
+        // Conditionally launch create table for h5p_contents_libraries.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table h5p_libraries_cachedassets to be created.
+        $table = new xmldb_table('h5p_libraries_cachedassets');
+
+        // Adding fields to table h5p_libraries_cachedassets.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('libraryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('hash', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table h5p_libraries_cachedassets.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('libraryid', XMLDB_KEY_FOREIGN, ['libraryid'], 'h5p_libraries_cachedassets', ['id']);
+
+        // Conditionally launch create table for h5p_libraries_cachedassets.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2019102500.04);
+    }
+
+    if ($oldversion < 2019103000.13) {
+
+        upgrade_analytics_fix_contextids_defaults();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2019103000.13);
+    }
+
+    if ($oldversion < 2019111300.00) {
+
+        // Define field coremajor to be added to h5p_libraries.
+        $table = new xmldb_table('h5p_libraries');
+        $field = new xmldb_field('coremajor', XMLDB_TYPE_INTEGER, '4', null, null, null, null, 'addto');
+
+        // Conditionally launch add field coremajor.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('coreminor', XMLDB_TYPE_INTEGER, '4', null, null, null, null, 'coremajor');
+
+        // Conditionally launch add field coreminor.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2019111300.00);
+    }
+
+    // Automatically generated Moodle v3.8.0 release upgrade line.
+    // Put any upgrade step following this.
+
     return true;
 }

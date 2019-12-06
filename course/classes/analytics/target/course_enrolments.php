@@ -115,6 +115,10 @@ abstract class course_enrolments extends \core_analytics\local\target\binary {
             return get_string('coursenotyetstarted', 'course');
         }
 
+        if (!$fortraining && !$course->get_course_data()->visible) {
+            return get_string('hiddenfromstudents');
+        }
+
         if (!$this->students = $course->get_students()) {
             return get_string('nocoursestudents', 'course');
         }
@@ -298,8 +302,20 @@ abstract class course_enrolments extends \core_analytics\local\target\binary {
     protected function enrolment_active_during_analysis_time(int $sampleid, int $starttime, int $endtime) {
 
         $userenrol = $this->retrieve('user_enrolments', $sampleid);
-        $enrolstart = $userenrol->timestart ?? $userenrol->timecreated;
-        $enrolend = $userenrol->timeend ?? PHP_INT_MAX;
+
+        if (!empty($userenrol->timestart)) {
+            $enrolstart = $userenrol->timestart;
+        } else {
+            // This is always set.
+            $enrolstart = $userenrol->timecreated;
+        }
+
+        if (!empty($userenrol->timeend)) {
+            $enrolend = $userenrol->timeend;
+        } else {
+            // Default to tre end of the world.
+            $enrolend = PHP_INT_MAX;
+        }
 
         if ($endtime && $endtime < $enrolstart) {
             /* The enrolment starts/ed after the analysis end time.

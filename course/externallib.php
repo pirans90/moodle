@@ -3619,7 +3619,7 @@ class core_course_external extends external_api {
     }
 
     /**
-     * Return structure for edit_module()
+     * Return structure for get_module()
      *
      * @since Moodle 3.3
      * @return external_description
@@ -4052,5 +4052,92 @@ class core_course_external extends external_api {
      */
     public static function get_recent_courses_returns() {
         return new external_multiple_structure(course_summary_exporter::get_read_structure(), 'Courses');
+    }
+
+    /**
+     * Returns description of method parameters
+     *
+     * @return external_function_parameters
+     */
+    public static function get_enrolled_users_by_cmid_parameters() {
+        return new external_function_parameters([
+            'cmid' => new external_value(PARAM_INT, 'id of the course module', VALUE_REQUIRED),
+            'groupid' => new external_value(PARAM_INT, 'id of the group', VALUE_DEFAULT, 0),
+        ]);
+    }
+
+    /**
+     * Get all users in a course for a given cmid.
+     *
+     * @param int $cmid Course Module id from which the users will be obtained
+     * @param int $groupid Group id from which the users will be obtained
+     * @return array List of users
+     * @throws invalid_parameter_exception
+     */
+    public static function get_enrolled_users_by_cmid(int $cmid, int $groupid = 0) {
+    global $PAGE;
+        $warnings = [];
+
+        [
+            'cmid' => $cmid,
+            'groupid' => $groupid,
+        ] = self::validate_parameters(self::get_enrolled_users_by_cmid_parameters(), [
+                'cmid' => $cmid,
+                'groupid' => $groupid,
+        ]);
+
+        list($course, $cm) = get_course_and_cm_from_cmid($cmid);
+        $coursecontext = context_course::instance($course->id);
+        self::validate_context($coursecontext);
+
+        $enrolledusers = get_enrolled_users($coursecontext, '', $groupid);
+
+        $users = array_map(function ($user) use ($PAGE) {
+            $user->fullname = fullname($user);
+            $userpicture = new user_picture($user);
+            $userpicture->size = 1;
+            $user->profileimage = $userpicture->get_url($PAGE)->out(false);
+            return $user;
+        }, $enrolledusers);
+        sort($users);
+
+        return [
+            'users' => $users,
+            'warnings' => $warnings,
+        ];
+    }
+
+    /**
+     * Returns description of method result value
+     *
+     * @return external_description
+     */
+    public static function get_enrolled_users_by_cmid_returns() {
+        return new external_single_structure([
+            'users' => new external_multiple_structure(self::user_description()),
+            'warnings' => new external_warnings(),
+        ]);
+    }
+
+    /**
+     * Create user return value description.
+     *
+     * @return external_description
+     */
+    public static function user_description() {
+        $userfields = array(
+            'id'    => new external_value(core_user::get_property_type('id'), 'ID of the user'),
+            'profileimage' => new external_value(PARAM_URL, 'The location of the users larger image', VALUE_OPTIONAL),
+            'fullname' => new external_value(PARAM_TEXT, 'The full name of the user', VALUE_OPTIONAL),
+            'firstname'   => new external_value(
+                    core_user::get_property_type('firstname'),
+                        'The first name(s) of the user',
+                        VALUE_OPTIONAL),
+            'lastname'    => new external_value(
+                    core_user::get_property_type('lastname'),
+                        'The family name of the user',
+                        VALUE_OPTIONAL),
+        );
+        return new external_single_structure($userfields);
     }
 }

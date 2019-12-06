@@ -82,5 +82,36 @@ class block_myoverview extends block_base {
     public function has_config() {
         return true;
     }
+
+    /**
+     * Return the plugin config settings for external functions.
+     *
+     * @return stdClass the configs for both the block instance and plugin
+     * @since Moodle 3.8
+     */
+    public function get_config_for_external() {
+        // Return all settings for all users since it is safe (no private keys, etc..).
+        $configs = get_config('block_myoverview');
+
+        // Get the customfield values (if any).
+        if ($configs->displaygroupingcustomfield) {
+            $group = get_user_preferences('block_myoverview_user_grouping_preference');
+            $sort = get_user_preferences('block_myoverview_user_sort_preference');
+            $view = get_user_preferences('block_myoverview_user_view_preference');
+            $paging = get_user_preferences('block_myoverview_user_paging_preference');
+            $customfieldvalue = get_user_preferences('block_myoverview_user_grouping_customfieldvalue_preference');
+
+            $renderable = new \block_myoverview\output\main($group, $sort, $view, $paging, $customfieldvalue);
+            $customfieldsexport = $renderable->get_customfield_values_for_export();
+            if (!empty($customfieldsexport)) {
+                $configs->customfieldsexport = json_encode($customfieldsexport);
+            }
+        }
+
+        return (object) [
+            'instance' => new stdClass(),
+            'plugin' => $configs,
+        ];
+    }
 }
 

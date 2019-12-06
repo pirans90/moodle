@@ -210,6 +210,12 @@ class api {
         $identityprovidersdata = \auth_plugin_base::prepare_identity_providers_for_output($identityproviders, $OUTPUT);
         if (!empty($identityprovidersdata)) {
             $settings['identityproviders'] = $identityprovidersdata;
+            // Clean URLs to avoid breaking Web Services.
+            // We can't do it in prepare_identity_providers_for_output() because it may break the web output.
+            foreach ($settings['identityproviders'] as &$ip) {
+                $ip['url'] = (!empty($ip['url'])) ? clean_param($ip['url'], PARAM_URL) : '';
+                $ip['iconurl'] = (!empty($ip['iconurl'])) ? clean_param($ip['iconurl'], PARAM_URL) : '';
+            }
         }
 
         // If age is verified, return also the admin contact details.
@@ -291,6 +297,13 @@ class api {
             $settings->calendar_adminseesall = $CFG->calendar_adminseesall;
             $settings->calendar_lookahead = $CFG->calendar_lookahead;
             $settings->calendar_maxevents = $CFG->calendar_maxevents;
+        }
+
+        if (empty($section) or $section == 'coursecolors') {
+            $colornumbers = range(1, 10);
+            foreach ($colornumbers as $number) {
+                $settings->{'core_admin_coursecolor' . $number} = get_config('core_admin', 'coursecolor' . $number);
+            }
         }
 
         return $settings;

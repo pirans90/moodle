@@ -1996,7 +1996,7 @@ class core_renderer extends renderer_base {
         $button = new single_button($url, $label, $method);
 
         foreach ((array)$options as $key=>$value) {
-            if (array_key_exists($key, $button)) {
+            if (property_exists($button, $key)) {
                 $button->$key = $value;
             } else {
                 $button->set_attribute($key, $value);
@@ -2479,7 +2479,7 @@ class core_renderer extends renderer_base {
     public function user_picture(stdClass $user, array $options = null) {
         $userpicture = new user_picture($user);
         foreach ((array)$options as $key=>$value) {
-            if (array_key_exists($key, $userpicture)) {
+            if (property_exists($userpicture, $key)) {
                 $userpicture->$key = $value;
             }
         }
@@ -2807,8 +2807,8 @@ EOD;
             $output .= $this->header();
         }
 
-        $message = '<p class="errormessage">' . $message . '</p>'.
-                '<p class="errorcode"><a href="' . $moreinfourl . '">' .
+        $message = '<p class="errormessage">' . s($message) . '</p>'.
+                '<p class="errorcode"><a href="' . s($moreinfourl) . '">' .
                 get_string('moreinformation') . '</a></p>';
         if (empty($CFG->rolesactive)) {
             $message .= '<p class="errormessage">' . get_string('installproblem', 'error') . '</p>';

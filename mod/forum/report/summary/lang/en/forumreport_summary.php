@@ -23,13 +23,24 @@
  */
 
 $string['attachmentcount'] = 'Number of attachments';
+$string['charcount'] = 'Character count';
 $string['viewcount'] = 'Number of views';
 $string['earliestpost'] = 'Earliest post';
+$string['eventreportdownloaded'] = 'Forum summary report downloaded';
+$string['eventreportviewed'] = 'Forum summary report viewed';
+$string['filter:datesbuttonlabel'] = 'Open the dates filter';
+$string['filter:datesname'] = 'Dates';
+$string['filter:datesfrom'] = 'From {$a}';
+$string['filter:datesfromto'] = '{$a->datefrom} - {$a->dateto}';
+$string['filter:datesorderwarning'] = 'Please ensure the "From" date selected is earlier than the "To" date selected.';
+$string['filter:datesto'] = 'To {$a}';
 $string['filter:groupsbuttonlabel'] = 'Open the groups filter';
 $string['filter:groupsname'] = 'Groups';
 $string['filter:groupscountall'] = 'Groups (all)';
 $string['filter:groupscountnumber'] = 'Groups ({$a})';
 $string['latestpost'] = 'Most recent post';
+$string['exportposts'] = 'Export posts';
+$string['exportpostslabel'] = 'Export posts for {$a}';
 $string['nodetitle'] = 'Summary report';
 $string['pluginname'] = 'Forum summary report';
 $string['postcount'] = 'Number of discussions posted';
@@ -39,3 +50,4 @@ $string['summary:viewall'] = 'Access summary report data for each user within a 
 $string['summary:view'] = 'Access summary report within a given forum or forums';
 $string['summarytitle'] = 'Summary report - {$a}';
 $string['viewsdisclaimer'] = 'Number of views column is not filtered by group';
+$string['wordcount'] = 'Word count';

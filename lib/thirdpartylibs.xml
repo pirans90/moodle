@@ -109,7 +109,7 @@
     <location>tcpdf</location>
     <name>TCPDF</name>
     <license>LGPL</license>
-    <version>6.2.26</version>
+    <version>6.3.2</version>
     <licenseversion>3</licenseversion>
   </library>
   <library>
@@ -307,5 +307,23 @@
     <name>babel-polyfill</name>
     <license>MIT</license>
     <version>6.26.0</version>
+  </library>
+  <library>
+    <location>mdn-polyfills</location>
+    <name>mdn-polyfill</name>
+    <license>MIT</license>
+    <version>5.19.0</version>
+  </library>
+  <library>
+    <location>emoji-data</location>
+    <name>Emoji data</name>
+    <license>MIT</license>
+    <version>4.1.0</version>
+  </library>
+  <library>
+    <location>h5p</location>
+    <name>h5p-php-library</name>
+    <license>GPL-3.0</license>
+    <version>1.24</version>
   </library>
 </libraries>

@@ -44,14 +44,23 @@ class summary_table extends table_sql {
     /** Groups filter type */
     const FILTER_GROUPS = 2;
 
+    /** Dates filter type */
+    const FILTER_DATES = 3;
+
     /** Table to store summary data extracted from the log table */
     const LOG_SUMMARY_TEMP_TABLE = 'forum_report_summary_counts';
+
+    /** Default number of rows to display per page */
+    const DEFAULT_PER_PAGE = 50;
 
     /** @var \stdClass The various SQL segments that will be combined to form queries to fetch various information. */
     public $sql;
 
     /** @var int The number of rows to be displayed per page. */
-    protected $perpage = 25;
+    protected $perpage = self::DEFAULT_PER_PAGE;
+
+    /** @var array The values available for pagination size per page. */
+    protected $perpageoptions = [50, 100, 200];
 
     /** @var \stdClass The course module object of the forum being reported on. */
     protected $cm;
@@ -72,14 +81,36 @@ class summary_table extends table_sql {
      */
     protected $context = null;
 
+    /** @var bool Whether the user has the capability/capabilities to perform bulk operations. */
+    protected $allowbulkoperations = false;
+
+    /**
+     * @var bool
+     */
+    private $showwordcharcounts = null;
+
+    /**
+     * @var bool Whether the user can see all private replies or not.
+     */
+    protected $canseeprivatereplies;
+
+    /**
+     * @var array Validated filter data, for use in GET parameters by export links.
+     */
+    protected $exportfilterdata = [];
+
     /**
      * Forum report table constructor.
      *
      * @param int $courseid The ID of the course the forum(s) exist within.
      * @param array $filters Report filters in the format 'type' => [values].
-     * @param bool $bulkoperations Is the user allowed to perform bulk operations?
+     * @param bool $allowbulkoperations Is the user allowed to perform bulk operations?
+     * @param bool $canseeprivatereplies Whether the user can see all private replies or not.
+     * @param int $perpage The number of rows to display per page.
+     * @param bool $canexport Is the user allowed to export records?
      */
-    public function __construct(int $courseid, array $filters, bool $bulkoperations) {
+    public function __construct(int $courseid, array $filters, bool $allowbulkoperations,
+            bool $canseeprivatereplies, int $perpage, bool $canexport) {
         global $USER, $OUTPUT;
 
         $forumid = $filters['forums'][0];
@@ -88,6 +119,9 @@ class summary_table extends table_sql {
 
         $this->cm = get_coursemodule_from_instance('forum', $forumid, $courseid);
         $this->context = \context_module::instance($this->cm->id);
+        $this->allowbulkoperations = $allowbulkoperations;
+        $this->canseeprivatereplies = $canseeprivatereplies;
+        $this->perpage = $perpage;
 
         // Only show their own summary unless they have permission to view all.
         if (!has_capability('forumreport/summary:viewall', $this->context)) {
@@ -96,7 +130,7 @@ class summary_table extends table_sql {
 
         $columnheaders = [];
 
-        if ($bulkoperations) {
+        if ($allowbulkoperations) {
             $mastercheckbox = new \core\output\checkbox_toggleall('summaryreport-table', true, [
                 'id' => 'select-all-users',
                 'name' => 'select-all-users',
@@ -120,8 +154,17 @@ class summary_table extends table_sql {
             $columnheaders['viewcount'] = get_string('viewcount', 'forumreport_summary');
         }
 
+        if ($this->show_word_char_counts()) {
+            $columnheaders['wordcount'] = get_string('wordcount', 'forumreport_summary');
+            $columnheaders['charcount'] = get_string('charcount', 'forumreport_summary');
+        }
+
         $columnheaders['earliestpost'] = get_string('earliestpost', 'forumreport_summary');
         $columnheaders['latestpost'] = get_string('latestpost', 'forumreport_summary');
+
+        if ($canexport) {
+            $columnheaders['export'] = get_string('exportposts', 'forumreport_summary');
+        }
 
         $this->define_columns(array_keys($columnheaders));
         $this->define_headers(array_values($columnheaders));
@@ -129,23 +172,26 @@ class summary_table extends table_sql {
         // Define configs.
         $this->define_table_configs();
 
+        // Apply relevant filters.
+        $this->define_base_filter_sql();
+        $this->apply_filters($filters);
+
         // Define the basic SQL data and object format.
         $this->define_base_sql();
-
-        // Apply relevant filters.
-        $this->apply_filters($filters);
     }
 
     /**
-     * Provides the string name of each filter type.
+     * Provides the string name of each filter type, to be used by errors.
+     * Note: This does not use language strings as the value is injected into error strings.
      *
      * @param int $filtertype Type of filter
      * @return string Name of the filter
      */
-    public function get_filter_name(int $filtertype): string {
+    protected function get_filter_name(int $filtertype): string {
         $filternames = [
             self::FILTER_FORUM => 'Forum',
             self::FILTER_GROUPS => 'Groups',
+            self::FILTER_DATES => 'Dates',
         ];
 
         return $filternames[$filtertype];
@@ -242,6 +288,44 @@ class summary_table extends table_sql {
     }
 
     /**
+     * Generate the export column.
+     *
+     * @param \stdClass $data The row data.
+     * @return string The link to export content belonging to the row.
+     */
+    public function col_export(\stdClass $data): string {
+        global $OUTPUT;
+
+        // If no posts, nothing to export.
+        if (empty($data->earliestpost)) {
+            return '';
+        }
+
+        $params = [
+            'id' => $this->cm->instance, // Forum id.
+            'userids[]' => $data->userid, // User id.
+        ];
+
+        // Add relevant filter params.
+        foreach ($this->exportfilterdata as $name => $data) {
+            if (is_array($data)) {
+                foreach ($data as $key => $value) {
+                    $params["{$name}[{$key}]"] = $value;
+                }
+            } else {
+                $params[$name] = $data;
+            }
+        }
+
+        $buttoncontext = [
+            'url' => new \moodle_url('/mod/forum/export.php', $params),
+            'label' => get_string('exportpostslabel', 'forumreport_summary', fullname($data)),
+        ];
+
+        return $OUTPUT->render_from_template('forumreport_summary/export_link_button', $buttoncontext);
+    }
+
+    /**
      * Override the default implementation to set a decent heading level.
      *
      * @return void.
@@ -310,63 +394,74 @@ class summary_table extends table_sql {
                 break;
 
             case self::FILTER_GROUPS:
-                // Skip adding filter if not applied, or all options are selected.
-                if ($this->is_filtered_by_groups($values)) {
-                    // Include users without groups if that option (-1) is selected.
-                    $nonekey = array_search(-1, $values, true);
+                // Filter data to only include content within specified groups (and/or no groups).
+                // Additionally, only display users who can post within the selected option(s).
 
-                    // Users within selected groups or not in any groups are included.
-                    if ($nonekey !== false && count($values) > 1) {
-                        unset($values[$nonekey]);
-                        list($groupidin, $groupidparams) = $DB->get_in_or_equal($values, SQL_PARAMS_NAMED, 'groupid');
+                // Only filter by groups the user has access to.
+                $groups = $this->get_filter_groups($values);
 
-                        // No select fields required.
-                        // No joins required (handled by where to prevent data duplication).
-                        $this->sql->filterwhere .= "
-                            AND (u.id =
-                                (SELECT gm.userid
-                                   FROM {groups_members} gm
-                                  WHERE gm.userid = u.id
-                                    AND gm.groupid {$groupidin}
-                               GROUP BY gm.userid
-                                  LIMIT 1)
-                            OR
-                                (SELECT nogm.userid
-                                   FROM mdl_groups_members nogm
-                                  WHERE nogm.userid = u.id
-                               GROUP BY nogm.userid
-                                  LIMIT 1)
-                            IS NULL)";
+                // Skip adding filter if not applied, or all valid options are selected.
+                if (!empty($groups)) {
+                    list($groupidin, $groupidparams) = $DB->get_in_or_equal($groups, SQL_PARAMS_NAMED);
+
+                    // Posts within selected groups and/or not in any groups (group ID -1) are included.
+                    // No user filtering as anyone enrolled can potentially post to unrestricted discussions.
+                    if (array_search(-1, $groups) !== false) {
+                        $this->sql->filterwhere .= " AND d.groupid {$groupidin}";
                         $this->sql->params += $groupidparams;
 
-                    } else if ($nonekey !== false) {
-                        // Only users within no groups are included.
-                        unset($values[$nonekey]);
+                    } else {
+                        // Only posts and users within selected groups are included.
+                        list($groupusersin, $groupusersparams) = $DB->get_in_or_equal($groups, SQL_PARAMS_NAMED);
 
-                        // No select fields required.
-                        $this->sql->filterfromjoins .= " LEFT JOIN {groups_members} nogm ON nogm.userid = u.id";
-                        $this->sql->filterwhere .= " AND nogm.id IS NULL";
-
-                    } else if (!empty($values)) {
-                        // Only users within selected groups are included.
-                        list($groupidin, $groupidparams) = $DB->get_in_or_equal($values, SQL_PARAMS_NAMED, 'groupid');
-
-                        // No select fields required.
                         // No joins required (handled by where to prevent data duplication).
                         $this->sql->filterwhere .= "
-                            AND u.id = (
-                                 SELECT gm.userid
-                                   FROM {groups_members} gm
-                                  WHERE gm.userid = u.id
-                                    AND gm.groupid {$groupidin}
-                               GROUP BY gm.userid
-                                  LIMIT 1)";
-                        $this->sql->params += $groupidparams;
+                            AND u.id IN (
+                                SELECT gm.userid
+                                  FROM {groups_members} gm
+                                 WHERE gm.groupid {$groupusersin}
+                            )
+                            AND d.groupid {$groupidin}";
+                        $this->sql->params += $groupusersparams + $groupidparams;
                     }
                 }
 
                 break;
 
+            case self::FILTER_DATES:
+                if (!isset($values['from']['enabled']) || !isset($values['to']['enabled']) ||
+                        ($values['from']['enabled'] && !isset($values['from']['timestamp'])) ||
+                        ($values['to']['enabled'] && !isset($values['to']['timestamp']))) {
+                    $paramcounterror = true;
+                } else {
+                    $this->sql->filterbase['dates'] = '';
+                    $this->sql->filterbase['dateslog'] = '';
+                    $this->sql->filterbase['dateslogparams'] = [];
+
+                    // From date.
+                    if ($values['from']['enabled']) {
+                        // If the filter was enabled, include the date restriction.
+                        // Needs to form part of the base join to posts, so will be injected by define_base_sql().
+                        $this->sql->filterbase['dates'] .= " AND p.created >= :fromdate";
+                        $this->sql->params['fromdate'] = $values['from']['timestamp'];
+                        $this->sql->filterbase['dateslog'] .= ' AND timecreated >= :fromdate';
+                        $this->sql->filterbase['dateslogparams']['fromdate'] = $values['from']['timestamp'];
+                        $this->exportfilterdata['timestampfrom'] = $values['from']['timestamp'];
+                    }
+
+                    // To date.
+                    if ($values['to']['enabled']) {
+                        // If the filter was enabled, include the date restriction.
+                        // Needs to form part of the base join to posts, so will be injected by define_base_sql().
+                        $this->sql->filterbase['dates'] .= " AND p.created <= :todate";
+                        $this->sql->params['todate'] = $values['to']['timestamp'];
+                        $this->sql->filterbase['dateslog'] .= ' AND timecreated <= :todate';
+                        $this->sql->filterbase['dateslogparams']['todate'] = $values['to']['timestamp'];
+                        $this->exportfilterdata['timestampto'] = $values['to']['timestamp'];
+                    }
+                }
+
+                break;
             default:
                 throw new coding_exception("Report filter type '{$filtertype}' not found.");
                 break;
@@ -389,7 +484,10 @@ class summary_table extends table_sql {
         $this->pageable(true);
         $this->is_downloadable(true);
         $this->no_sorting('select');
+        $this->no_sorting('export');
         $this->set_attribute('id', 'forumreport_summary_table');
+        $this->sql = new \stdClass();
+        $this->sql->params = [];
     }
 
     /**
@@ -398,13 +496,12 @@ class summary_table extends table_sql {
      * @return void.
      */
     protected function define_base_sql(): void {
-        $this->sql = new \stdClass();
+        global $USER;
 
         $userfields = get_extra_user_fields($this->context);
         $userfieldssql = \user_picture::fields('u', $userfields);
 
         // Define base SQL query format.
-        // Ignores private replies as they are not visible to all participants.
         $this->sql->basefields = ' ue.userid AS userid,
                                    e.courseid AS courseid,
                                    f.id as forumid,
@@ -415,6 +512,17 @@ class summary_table extends table_sql {
                                    MIN(p.created) AS earliestpost,
                                    MAX(p.created) AS latestpost';
 
+        // Handle private replies.
+        $privaterepliessql = '';
+        $privaterepliesparams = [];
+        if (!$this->canseeprivatereplies) {
+            $privaterepliessql = ' AND (p.privatereplyto = :privatereplyto
+                                        OR p.userid = :privatereplyfrom
+                                        OR p.privatereplyto = 0)';
+            $privaterepliesparams['privatereplyto'] = $USER->id;
+            $privaterepliesparams['privatereplyfrom'] = $USER->id;
+        }
+
         $this->sql->basefromjoins = '    {enrol} e
                                     JOIN {user_enrolments} ue ON ue.enrolid = e.id
                                     JOIN {user} u ON u.id = ue.userid
@@ -422,7 +530,8 @@ class summary_table extends table_sql {
                                     JOIN {forum_discussions} d ON d.forum = f.id
                                LEFT JOIN {forum_posts} p ON p.discussion =  d.id
                                      AND p.userid = ue.userid
-                                     AND p.privatereplyto = 0
+                                     ' . $privaterepliessql
+                                       . $this->sql->filterbase['dates'] . '
                                LEFT JOIN (
                                             SELECT COUNT(fi.id) AS attcount, fi.itemid AS postid, fi.userid
                                               FROM {files} fi
@@ -440,21 +549,34 @@ class summary_table extends table_sql {
             $this->fill_log_summary_temp_table($this->context->id);
 
             $this->sql->basefields .= ', CASE WHEN tmp.viewcount IS NOT NULL THEN tmp.viewcount ELSE 0 END AS viewcount';
-            $this->sql->basefromjoins .= ' LEFT JOIN {' . self::LOG_SUMMARY_TEMP_TABLE . '} tmp ON tmp.userid = u.id';
+            $this->sql->basefromjoins .= ' LEFT JOIN {' . self::LOG_SUMMARY_TEMP_TABLE . '} tmp ON tmp.userid = u.id ';
             $this->sql->basegroupby .= ', tmp.viewcount';
         }
 
-        $this->sql->params = [
+        if ($this->show_word_char_counts()) {
+            // All p.wordcount values should be NOT NULL, this CASE WHEN is an extra just-in-case.
+            $this->sql->basefields .= ', SUM(CASE WHEN p.wordcount IS NOT NULL THEN p.wordcount ELSE 0 END) AS wordcount';
+            $this->sql->basefields .= ', SUM(CASE WHEN p.charcount IS NOT NULL THEN p.charcount ELSE 0 END) AS charcount';
+        }
+
+        $this->sql->params += [
             'component' => 'mod_forum',
             'courseid' => $this->cm->course,
-        ];
+        ] + $privaterepliesparams;
 
         // Handle if a user is limited to viewing their own summary.
         if (!empty($this->userid)) {
             $this->sql->basewhere .= ' AND ue.userid = :userid';
             $this->sql->params['userid'] = $this->userid;
         }
+    }
 
+    /**
+     * Instantiate the properties to store filter values.
+     *
+     * @return void.
+     */
+    protected function define_base_filter_sql(): void {
         // Filter values will be populated separately where required.
         $this->sql->filterfields = '';
         $this->sql->filterfromjoins = '';
@@ -506,6 +628,11 @@ class summary_table extends table_sql {
         $this->build_table();
         $this->close_recordset();
         $this->finish_output();
+
+        // Drop the temp table when necessary.
+        if ($this->logreader) {
+            $this->drop_log_summary_temp_table();
+        }
     }
 
     /**
@@ -520,6 +647,13 @@ class summary_table extends table_sql {
 
         // Apply groups filter.
         $this->add_filter(self::FILTER_GROUPS, $filters['groups']);
+
+        // Apply dates filter.
+        $datevalues = [
+            'from' => $filters['datefrom'],
+            'to' => $filters['dateto'],
+        ];
+        $this->add_filter(self::FILTER_DATES, $datevalues);
     }
 
     /**
@@ -601,11 +735,17 @@ class summary_table extends table_sql {
             $logtable = $this->logreader->get_internal_log_table_name();
             $nonanonymous = 'AND anonymous = 0';
         }
-        $params = ['contextid' => $contextid];
+
+        // Apply dates filter if applied.
+        $datewhere = $this->sql->filterbase['dateslog'] ?? '';
+        $dateparams = $this->sql->filterbase['dateslogparams'] ?? [];
+
+        $params = ['contextid' => $contextid] + $dateparams;
         $sql = "INSERT INTO {" . self::LOG_SUMMARY_TEMP_TABLE . "} (userid, viewcount)
                      SELECT userid, COUNT(*) AS viewcount
                        FROM {" . $logtable . "}
                       WHERE contextid = :contextid
+                            $datewhere
                             $nonanonymous
                    GROUP BY userid";
         $DB->execute($sql, $params);
@@ -630,25 +770,73 @@ class summary_table extends table_sql {
     }
 
     /**
-     * Check whether the groups filter will be applied by checking whether the number of groups selected
-     * matches the total number of options available (all groups plus no groups option).
+     * Drops the temp table.
      *
-     * @param array $groups The group IDs selected.
-     * @return bool
+     * This should be called once the processing for the summary table has been done.
      */
-    protected function is_filtered_by_groups(array $groups): bool {
-        static $groupsavailablecount = null;
+    protected function drop_log_summary_temp_table(): void {
+        global $DB;
 
-        if (empty($groups)) {
-            return false;
+        // Drop the temp table if it exists.
+        $temptable = new \xmldb_table(self::LOG_SUMMARY_TEMP_TABLE);
+        $dbman = $DB->get_manager();
+        if ($dbman->table_exists($temptable)) {
+            $dbman->drop_table($temptable);
+        }
+    }
+
+    /**
+     * Get the final list of groups to filter by, based on the groups submitted,
+     * and those the user has access to.
+     *
+     *
+     * @param array $groups The group IDs submitted.
+     * @return array Group objects of groups to use in groups filter.
+     *                If no filtering required (all groups selected), returns [].
+     */
+    protected function get_filter_groups(array $groups): array {
+        global $USER;
+
+        $groupmode = groups_get_activity_groupmode($this->cm);
+        $aag = has_capability('moodle/site:accessallgroups', $this->context);
+        $allowedgroups = [];
+        $filtergroups = [];
+
+        // Filtering only valid if a forum groups mode is enabled.
+        if (in_array($groupmode, [VISIBLEGROUPS, SEPARATEGROUPS])) {
+            $allgroupsobj = groups_get_all_groups($this->cm->course, 0, $this->cm->groupingid);
+            $allgroups = [];
+
+            foreach ($allgroupsobj as $group) {
+                $allgroups[] = $group->id;
+            }
+
+            if ($groupmode == VISIBLEGROUPS || $aag) {
+                $nogroups = new \stdClass();
+                $nogroups->id = -1;
+                $nogroups->name = get_string('groupsnone');
+
+                // Any groups and no groups.
+                $allowedgroupsobj = $allgroupsobj + [$nogroups];
+            } else {
+                // Only assigned groups.
+                $allowedgroupsobj = groups_get_all_groups($this->cm->course, $USER->id, $this->cm->groupingid);
+            }
+
+            foreach ($allowedgroupsobj as $group) {
+                $allowedgroups[] = $group->id;
+            }
+
+            // If not all groups in course are selected, filter by allowed groups submitted.
+            if (!empty($groups) && !empty(array_diff($allowedgroups, $groups))) {
+                $filtergroups = array_intersect($groups, $allowedgroups);
+            } else if (!empty(array_diff($allgroups, $allowedgroups))) {
+                // If user's 'all groups' is a subset of the course groups, filter by all groups available to them.
+                $filtergroups = $allowedgroups;
+            }
         }
 
-        // Find total number of options available (groups plus 'no groups'), if not already fetched.
-        if (is_null($groupsavailablecount)) {
-            $groupsavailablecount = 1 + count(groups_get_activity_allowed_groups($this->cm));
-        }
-
-        return (count($groups) < $groupsavailablecount);
+        return $filtergroups;
     }
 
     /**
@@ -662,5 +850,92 @@ class summary_table extends table_sql {
 
         $this->is_downloading($format, $filename);
         $this->out($this->perpage, false);
+    }
+
+    /*
+     * Should the word / char counts be displayed?
+     *
+     * We don't want to show word/char columns if there is any null value because this means
+     * that they have not been calculated yet.
+     * @return bool
+     */
+    protected function show_word_char_counts(): bool {
+        global $DB;
+
+        if (is_null($this->showwordcharcounts)) {
+            // This should be really fast.
+            $sql = "SELECT 'x'
+                      FROM {forum_posts} fp
+                      JOIN {forum_discussions} fd ON fd.id = fp.discussion
+                     WHERE fd.forum = :forumid AND (fp.wordcount IS NULL OR fp.charcount IS NULL)";
+
+            if ($DB->record_exists_sql($sql, ['forumid' => $this->cm->instance])) {
+                $this->showwordcharcounts = false;
+            } else {
+                $this->showwordcharcounts = true;
+            }
+        }
+
+        return $this->showwordcharcounts;
+    }
+
+    /**
+     * Fetch the number of items to be displayed per page.
+     *
+     * @return int
+     */
+    public function get_perpage(): int {
+        return $this->perpage;
+    }
+
+    /**
+     * Overriding method to render the bulk actions and items per page pagination options directly below the table.
+     *
+     * @return void
+     */
+    public function wrap_html_finish(): void {
+        global $OUTPUT;
+
+        $data = new \stdClass();
+        $data->showbulkactions = $this->allowbulkoperations;
+
+        if ($data->showbulkactions) {
+            $data->id = 'formactionid';
+            $data->attributes = [
+                [
+                    'name' => 'data-action',
+                    'value' => 'toggle'
+                ],
+                [
+                    'name' => 'data-togglegroup',
+                    'value' => 'summaryreport-table'
+                ],
+                [
+                    'name' => 'data-toggle',
+                    'value' => 'action'
+                ],
+                [
+                    'name' => 'disabled',
+                    'value' => true
+                ]
+            ];
+            $data->actions = [
+                [
+                    'value' => '#messageselect',
+                    'name' => get_string('messageselectadd')
+                ]
+            ];
+        }
+
+        // Include the pagination size selector.
+        $perpageoptions = array_combine($this->perpageoptions, $this->perpageoptions);
+        $selected = in_array($this->perpage, $this->perpageoptions) ? $this->perpage : $this->perpageoptions[0];
+        $perpageselect = new \single_select(new \moodle_url(''), 'perpage',
+                $perpageoptions, $selected, null, 'selectperpage');
+        $perpageselect->set_label(get_string('perpage', 'moodle'));
+
+        $data->perpage = $perpageselect->export_for_template($OUTPUT);
+
+        echo $OUTPUT->render_from_template('forumreport_summary/bulk_action_menu', $data);
     }
 }

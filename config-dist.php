@@ -639,9 +639,19 @@ $CFG->admin = 'admin';
 // to check the latest default in question/classes/bank/view.php before setting this.
 //
 //      $CFG->questionbankcolumns = 'checkbox_column,question_type_column,'
-//              . 'question_name_idnumber_tags_column,tags_action_column,edit_action_column,'
-//              . 'copy_action_column,preview_action_column,delete_action_column,'
+//              . 'question_name_idnumber_tags_column,edit_menu_column,'
+//              . 'tags_action_column,edit_action_column,copy_action_column,'
+//              . 'preview_action_column,delete_action_column,export_xml_action_column,'
 //              . 'creator_name_column,modifier_name_column';
+//
+// Forum summary report
+//
+// In order for the forum summary report to calculate word count and character count data, those details are now stored
+// for each post in the database when posts are created or updated. For posts that existed prior to a Moodle 3.8 upgrade,
+// these are calculated by the refresh_forum_post_counts ad-hoc task in chunks of 5000 posts per batch by default.
+// That default can be overridden by setting an integer value for $CFG->forumpostcountchunksize.
+//
+//      $CFG->forumpostcountchunksize = 5000;
 //
 //=========================================================================
 // 7. SETTINGS FOR DEVELOPMENT SERVERS - not intended for production use!!!

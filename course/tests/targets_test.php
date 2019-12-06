@@ -130,6 +130,27 @@ class core_analytics_targets_testcase extends advanced_testcase {
                 ],
                 'isvalid' => get_string('completionnotenabledforcourse', 'completion')
             ],
+            'coursehiddentraining' => [
+                'params' => [
+                    'enablecompletion' => 1,
+                    'startdate' => mktime(0, 0, 0, $month - 1, 24, $year - 1),
+                    'enddate' => mktime(0, 0, 0, $month - 1, 23, $year),
+                    'students' => true,
+                    'visible' => '0',
+                ],
+                'isvalid' => true,
+            ],
+            'coursehiddenprediction' => [
+                'params' => [
+                    'enablecompletion' => 1,
+                    'startdate' => mktime(0, 0, 0, $month - 1, 24, $year),
+                    'enddate' => mktime(0, 0, 0, $month - 1, 23, $year + 1),
+                    'students' => true,
+                    'visible' => '0',
+                ],
+                'isvalid' => get_string('hiddenfromstudents'),
+                'fortraining' => false
+            ],
         ];
     }
 
@@ -251,8 +272,8 @@ class core_analytics_targets_testcase extends advanced_testcase {
             ],
             'enrol-partly-active-ends-afterwards' => [
                 'starttime' => $now,
-                'endtime' => $now + (WEEKSECS * 9),
-                'timestart' => $now + (WEEKSECS * 10),
+                'endtime' => $now + (WEEKSECS * 10),
+                'timestart' => $now + (WEEKSECS * 9),
                 'timeend' => $now + (WEEKSECS * 11),
                 'nullcalculation' => true,
             ],
@@ -270,12 +291,33 @@ class core_analytics_targets_testcase extends advanced_testcase {
                 'timeend' => false,
                 'nullcalculation' => true,
             ],
-            'enrol-mostly-active-no-enrolment-end' => [
+            'enrol-mostly-active-no-enrolment-end-false' => [
                 'starttime' => $now,
                 'endtime' => $now + (WEEKSECS * 10),
                 'timestart' => $now + WEEKSECS,
                 'timeend' => false,
-                'nullcalculation' => true,
+                'nullcalculation' => false,
+            ],
+            'enrol-mostly-active-no-enrolment-end-zero' => [
+                'starttime' => $now,
+                'endtime' => $now + (WEEKSECS * 10),
+                'timestart' => $now + WEEKSECS,
+                'timeend' => 0,
+                'nullcalculation' => false,
+            ],
+            'enrol-no-enrolment-start-false' => [
+                'starttime' => $now,
+                'endtime' => $now + (WEEKSECS * 10),
+                'timestart' => false,
+                'timeend' => $now + (WEEKSECS * 9),
+                'nullcalculation' => false,
+            ],
+            'enrol-no-enrolment-start-zero' => [
+                'starttime' => $now,
+                'endtime' => $now + (WEEKSECS * 10),
+                'timestart' => 0,
+                'timeend' => $now + (WEEKSECS * 9),
+                'nullcalculation' => false,
             ],
             'no-start' => [
                 'starttime' => 0,
